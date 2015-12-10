@@ -9,18 +9,21 @@
 class Type {
     public:
         Type(const std::string& identifier);
+        bool operator==(const Type &h) const;
+        bool operator!=(const Type &h) const;
 
         std::string identifier;
         int hashed_id;
         Type() = default;
+        virtual ~Type() = default;
 };
 
 class FuncType : public Type {
     public:
-        std::vector<Type> argTypes;
-        Type returnType;
+        std::vector<std::shared_ptr<Type>> argTypes;
+        std::shared_ptr<Type> returnType;
 
-        FuncType(const std::vector<Type>& args, const Type& ret);
+        FuncType(const std::vector<std::shared_ptr<Type>>& args, std::shared_ptr<Type> ret);
 };
 
 class CheckerError: public Error {
@@ -28,8 +31,7 @@ class CheckerError: public Error {
         CheckerError(std::string str) : Error(str) {}
 };
 
-bool operator==(const Type& t, const Type& h);
 
-extern Type boolType, intType;
-typedef std::map<std::string, Type> Enviroment;
+std::ostream& operator<<(std::ostream& out, const CheckerError& err);
+typedef std::map<std::string, std::shared_ptr<Type>> Environment;
 #endif

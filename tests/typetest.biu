@@ -1,0 +1,16 @@
+(extern * (-> Int Int Int))
+
+(define (square (x Int))
+  (* x x))
+
+(square 5)
+
+(define (transform 
+          (x Int) 
+          (f (-> Int Int)))
+  (f x))
+
+(define ((fact Int) (n Int))
+  (fact 5))
+
+(define y (transform 5 square))

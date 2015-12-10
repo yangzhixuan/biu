@@ -14,6 +14,7 @@ using std::cerr;
 using std::string;
 using std::vector;
 using std::unique_ptr;
+using std::shared_ptr;
 using std::pair;
 
 // =====--------  Lexer Part -------===================
@@ -46,13 +47,13 @@ class ParserError : public Error {
 class ASTBase {
     public:
         virtual ~ASTBase() = 0;
-        virtual Type checkType(Enviroment & e) /*= 0*/;
+        virtual shared_ptr<Type> checkType(Environment &e) /*= 0*/;
 };
 
 class ExprAST : public ASTBase {
     public:
         virtual ~ExprAST() = 0;
-        virtual Type parseType();
+        virtual shared_ptr<Type> parseType();
 };
 
 class AtomicAST : public ExprAST {
@@ -65,19 +66,22 @@ class NumberAST : public AtomicAST {
     public:
         double value;
         NumberAST(double value) : value(value) {}
+        shared_ptr<Type> checkType(Environment &e) override;
 };
 
 class StringAST : public AtomicAST {
     public:
         string str;
         StringAST(string str) : str(str) {}
+        shared_ptr<Type> checkType(Environment &e) override;
 };
 
 class SymbolAST: public AtomicAST {
     public:
         string identifier;
         SymbolAST(string str) : identifier(str) {}
-        Type parseType() override;
+        shared_ptr<Type> parseType() override;
+        shared_ptr<Type> checkType(Environment &e) override;
 };
 
 class FormAST : public ExprAST {
@@ -89,8 +93,8 @@ class FormAST : public ExprAST {
 class ApplicationFormAST : public FormAST {
     public:
         vector<unique_ptr<ExprAST>> elements;
-        //Type checkType(Enviroment & e) override;
-        Type parseType() override;
+        shared_ptr<Type> checkType(Environment &e) override;
+        shared_ptr<Type> parseType() override;
 };
 
 class DefineFuncFormAST : public FormAST {
@@ -100,14 +104,21 @@ class DefineFuncFormAST : public FormAST {
         vector<pair<unique_ptr<SymbolAST>, unique_ptr<ExprAST>>> argList;
         vector<unique_ptr<ExprAST>> body;
 
-        Type checkType(Enviroment & e) override;
+        shared_ptr<Type> checkType(Environment &e) override;
 };
 
 class DefineVarFormAST : public FormAST {
     public:
         unique_ptr<SymbolAST> name;
         unique_ptr<ExprAST> value;
-        Type checkType(Enviroment & e) override;
+        shared_ptr<Type> checkType(Environment &e) override;
+};
+
+class ExternFormAST: public FormAST {
+public:
+    unique_ptr<SymbolAST> name;
+    unique_ptr<ExprAST> type;
+    shared_ptr<Type> checkType(Environment &e) override;
 };
 
 class IfFormAST : public FormAST {
@@ -118,7 +129,7 @@ class IfFormAST : public FormAST {
 class FormsAST : public ASTBase {
     public:
         vector<unique_ptr<FormAST>> forms;
-        Type checkType(Enviroment& e) override;
+        shared_ptr<Type> checkType(Environment &e) override;
 };
 
 // =====--------  Parser Part -------===================
