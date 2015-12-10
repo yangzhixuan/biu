@@ -124,6 +124,7 @@ public:
 class IfFormAST : public FormAST {
     public:
         unique_ptr<ExprAST> condition, branch_true, branch_false;
+        shared_ptr<Type> checkType(Environment &e) override;
 };
 
 class FormsAST : public ASTBase {

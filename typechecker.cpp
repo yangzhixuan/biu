@@ -7,6 +7,13 @@ std::ostream& operator<<(std::ostream& out, const CheckerError& err)
     return out;
 }
 
+//===------------ type constants --------------=====
+//==================================================
+auto intType = std::make_shared<Type>("Int");
+auto stringType = std::make_shared<Type>("String");
+auto voidType = std::make_shared<Type>("Void");
+auto boolType = std::make_shared<Type>("Bool");
+
 //===------------ types -----------------------=====
 //==================================================
 Type::Type(const std::string& id) : identifier(id)
@@ -59,11 +66,11 @@ shared_ptr<Type> ExprAST::parseType()
 shared_ptr<Type> SymbolAST::parseType()
 {
     if(identifier == "Bool"){
-        return std::make_shared<Type>("Bool");
+        return boolType;
     }
 
     if(identifier == "Int") {
-        return std::make_shared<Type>("Int");
+        return intType;
     }
     throw(CheckerError("invalid type: " + identifier));
     return nullptr;
@@ -165,11 +172,11 @@ shared_ptr<Type> ApplicationFormAST::checkType(Environment &e) {
 }
 
 shared_ptr<Type> StringAST::checkType(Environment &e) {
-    return std::make_shared<Type>("String");
+    return stringType;
 }
 
 shared_ptr<Type> NumberAST::checkType(Environment &e) {
-    return std::make_shared<Type>("Int");
+    return intType;
 }
 
 shared_ptr<Type> SymbolAST::checkType(Environment &e) {
@@ -183,7 +190,24 @@ shared_ptr<Type> SymbolAST::checkType(Environment &e) {
 shared_ptr<Type> ExternFormAST::checkType(Environment &e) {
     auto t = type->parseType();
     e[name->identifier] = t;
-    return std::make_shared<Type>("Void");
+    return voidType;
+}
+
+shared_ptr<Type> IfFormAST::checkType(Environment &e) {
+    auto t = condition->checkType(e);
+    if(*t != *boolType) {
+        throw(CheckerError("IfForm condition must be bool, got " + t->identifier));
+        return nullptr;
+    }
+    Environment newEnv1(e);
+    Environment newEnv2(e);
+    auto b1 = branch_true->checkType(newEnv1);
+    auto b2 = branch_false->checkType(newEnv2);
+    if(*b1 != *b2) {
+        throw(CheckerError("IfForm type of branches mismatch, got " + b1->identifier + " and " + b2->identifier));
+        return nullptr;
+    }
+    return b1;
 }
 
 shared_ptr<Type> FormsAST::checkType(Environment &e)
@@ -191,5 +215,5 @@ shared_ptr<Type> FormsAST::checkType(Environment &e)
     for(const auto & f : forms) {
         f->checkType(e);
     }
-    return std::make_shared<Type>("Int");
+    return voidType;
 }

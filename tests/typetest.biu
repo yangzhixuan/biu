@@ -1,4 +1,8 @@
+(extern + (-> Int Int Int))
+(extern - (-> Int Int Int))
 (extern * (-> Int Int Int))
+(extern / (-> Int Int Int))
+(extern == (-> Int Int Bool))
 
 (define (square (x Int))
   (* x x))
@@ -11,6 +15,8 @@
   (f x))
 
 (define ((fact Int) (n Int))
-  (fact 5))
+  (if (== n 0)
+    0
+    (* n (fact (- n 1)))))
 
 (define y (transform 5 square))
