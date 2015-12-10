@@ -1,0 +1,34 @@
+(define (square (x Int))
+  (* x x))
+
+; for recursive functions, we require the programmer to specify the type of the return value
+(define ((fact Int) (n Int))
+  (if (== n 0)
+    1
+    (* n (fact (- n 1)))))
+
+(define (rand-gen (seed Int))
+  (define (status (Ref Int)))
+  (:= status seed)
+  (lambda ()
+    (:= status (* *status 5))
+    *status))
+
+(define (my-sort! (a (Array Int)))
+  (define (n (length a)))
+  (let loop1 (((i Int) 0))
+   (let loop2 (((j Int) (+ 1 i)))
+    (if (< (at a j) (at a i))
+      (swap! (cell a i) (cell a j)))
+    (loop2 (+ 1 j)))
+   (loop1 (+ 1 i))))
+
+(define (main)
+  (define n (read-int))
+  (define (array (Array Int)))
+  (let loop  ((k 0))
+   (if (< k n)
+     (begin (push-back! array (read-int))
+            (loop (+ 1 k)))))
+  (my-sort! array)
+  0)

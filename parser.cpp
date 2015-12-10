@@ -9,6 +9,13 @@ static double numVal;
 static string symbolStr;
 static string stringStr;
 
+static int validSymbolChar(int c)
+{
+    return isalpha(c) || c == '_' || c == '+' || c == '-'
+        || c == '*' || c == '/' || c == '?' || c == '=' || c == '<' || c == '>'
+        || c == ':' || c == '!';
+}
+
 // gettok: return the next token from the standard input
 static int getToken()
 {
@@ -17,13 +24,13 @@ static int getToken()
         lastChar = getchar();
     }
 
-    if(isalpha(lastChar)) {
-        // symbol: [A-Za-z_][A-Za-z0-9_]+
+    if(validSymbolChar(lastChar)) {
+        // symbol: [SymbolChar][SymbolChar,0-9]+
         symbolStr = "";
         do {
             symbolStr += lastChar;
             lastChar = getchar();
-        } while(isalnum(lastChar) || lastChar == '_');
+        } while(validSymbolChar(lastChar) || isdigit(lastChar));
         return tok_symbol;
     }
 
@@ -57,10 +64,14 @@ static int getToken()
                     return tok_error;
                 }
             }
-        } while((!escaped || lastChar != '"') && lastChar != EOF);
+        } while((!escaped && lastChar != '"') && lastChar != EOF);
+
+        if(lastChar == '"') {
+            lastChar = getchar();
+        }
 
         if(lastChar == EOF) {
-            lexerError("Nonterminated string");
+            lexerError(string("Nonterminated string: ") + stringStr);
             return tok_error;
         }
 
@@ -99,13 +110,13 @@ static string tok2str(int tok)
         case tok_string:
             return "tok_string";
         case tok_symbol:
-            return "tok_symbol";
-        defualt:
+            return "tok_symbol(" + symbolStr + ")";
+        default:
             string ret = "";
             ret += tok;
             return ret;
     }
-    return "unknown tok";
+    return "unknown tok(" + std::to_string(tok) + ")";
 }
 
 std::ostream& operator<<(std::ostream& out, const LexerError& err)
@@ -122,6 +133,7 @@ static void lexerError(const string& info)
 // =====--------  AST Part -------===================
 // =====--------------------------===================
 ASTBase::~ASTBase() {}
+FormAST::~FormAST() {}
 AtomicAST::~AtomicAST() {}
 ExprAST::~ExprAST() {}
 
@@ -130,6 +142,7 @@ ExprAST::~ExprAST() {}
 static int curTok;
 static int getNextToken() 
 {
+    printf("consume: %s\n", tok2str(curTok).c_str());
     curTok = getToken();
     return curTok;
 }
@@ -151,12 +164,98 @@ unique_ptr<FormAST> parseForm()
         return nullptr;
     }
     getNextToken();
-    auto form = llvm::make_unique<FormAST>();
-    while(curTok != ')') {
-        form->elements.push_back( parseExpr() );
+
+    if(curTok == tok_symbol && symbolStr == "define") {
+        getNextToken();
+        if(curTok == tok_symbol) {
+            // variable definition
+            auto form = llvm::make_unique<DefineVarFormAST>();
+            // TODO add define-var type annotating
+            form->name = parseSymbol();
+            form->value = parseExpr();
+            if(curTok != ')') {
+                parserError(string("parseForm: define-var-form expect a ')', get: ") + tok2str(curTok));
+                return nullptr;
+            }
+            getNextToken();
+        return std::move(form);
+            return move(form);
+        } else if(curTok == '(') {
+            // function definition
+            auto form = llvm::make_unique<DefineFuncFormAST>();
+            getNextToken();
+
+
+            if(curTok == tok_symbol) {
+                form->name = parseSymbol();
+            } else if (curTok == '(') {
+                getNextToken();
+                form->name = parseSymbol();
+                form->type = parseExpr();
+                if(curTok != ')') {
+                    parserError(string("parseForm expects ')', get: ") + tok2str(curTok));
+                    return nullptr;
+                }
+                getNextToken();
+            } else {
+                parserError(string("parseForm expects function name or name/type pair, get: ") + tok2str(curTok));
+                return nullptr;
+            }
+
+
+            // parse arglist
+            while(curTok == '(') {
+                getNextToken();
+                auto argName = parseSymbol();
+                auto argType = parseExpr();
+                form->argList.push_back(make_pair(std::move(argName), std::move(argType)));
+                if(curTok != ')') {
+                    parserError(string("parseForm: argument pair expects a ')', get: ") + tok2str(curTok));
+                    return nullptr;
+                }
+                getNextToken();
+            }
+
+            if(curTok != ')') {
+                parserError(string("parseForm expect a ')', get: ") + tok2str(curTok));
+                return nullptr;
+            }
+            getNextToken();
+
+            while(curTok != ')') {
+                form->body.push_back( parseExpr() );
+            }
+            getNextToken();
+            return std::move(form);
+        } else {
+            parserError(string("invalid define-form, next token: ") + tok2str(curTok));
+            return nullptr;
+        }
+
+    } else if(curTok == tok_symbol && symbolStr == "if") {
+        // if-form
+        getNextToken();
+        auto form = llvm::make_unique<IfFormAST>();
+        form->condition = parseExpr();
+        form->branch_true = parseExpr();
+        if(curTok != ')') {
+            form->branch_false = parseExpr();
+        }
+
+        if(curTok != ')') {
+            parserError(string("parseForm: if-form expect a ')', get: ") + tok2str(curTok));
+            return nullptr;
+        }
+        getNextToken();
+        return std::move(form);
+    } else {
+        auto form = llvm::make_unique<ApplicationFormAST>();
+        while(curTok != ')') {
+            form->elements.push_back( parseExpr() );
+        }
+        getNextToken();
+        return move(form);
     }
-    getNextToken();
-    return form;
 }
 
 unique_ptr<ExprAST> parseExpr()
@@ -210,17 +309,7 @@ std::ostream& operator<<(std::ostream& out, const ParserError& err)
     return out;
 }
 
-// =====--------  Main -------------===================
-// =====----------------------------===================
-int main(int argc, const char *argv[])
+void initParser()
 {
-    try{
-        getNextToken();
-        auto ast = parseForms();
-    }catch(const LexerError &e){
-        cerr<<e<<std::endl;
-    }catch(const ParserError &e){
-        cerr<<e<<std::endl;
-    }
-    return 0;
+    getNextToken();
 }
