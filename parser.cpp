@@ -50,10 +50,9 @@ static int getToken()
     if(lastChar == '"') {
         // string: \" is escaped
         stringStr = "";
-        bool escaped = false;
+        bool escaped;
         do {
             escaped = false;
-            stringStr += lastChar;
             lastChar = getchar();
             if(lastChar == '\\') {
                 lastChar = getchar();
@@ -64,7 +63,12 @@ static int getToken()
                     return tok_error;
                 }
             }
-        } while((!escaped && lastChar != '"') && lastChar != EOF);
+            if((!escaped && lastChar != '"') && lastChar != EOF) {
+                stringStr += lastChar;
+            } else {
+                break;
+            }
+        } while(true);
 
         if(lastChar == '"') {
             lastChar = getchar();

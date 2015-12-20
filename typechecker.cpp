@@ -83,6 +83,61 @@ FuncType::FuncType(const std::vector<shared_ptr<BiuType>>& args, shared_ptr<BiuT
     hashed_id = std::hash<std::string>()(id);
 }
 
+//------------------ ScanFreeVariables ------------//
+//==================================================
+
+void ExprAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    return;
+}
+
+void SymbolAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    if(binded.find(identifier) == binded.end()) {
+        s.insert(make_pair(identifier, symbolType));
+    }
+    return;
+}
+
+void DefineVarFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    value->scanFreeVars(s, binded);
+    binded.insert(name->identifier);
+}
+
+void DefineFuncFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    std::set<string> newBinded(binded);
+    newBinded.insert(name->identifier);
+    for(const auto & e : argList) {
+        newBinded.insert(e.first->identifier);
+    }
+    for(const auto & e : body) {
+        e->scanFreeVars(s, newBinded);
+    }
+    binded.insert(name->identifier);
+}
+
+void IfFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    condition->scanFreeVars(s, binded);
+    auto e1 = std::set<string>(binded);
+    auto e2 = std::set<string>(binded);
+    branch_true->scanFreeVars(s, e1);
+    branch_false->scanFreeVars(s, e2);
+}
+
+void ApplicationFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    for(const auto & e : elements) {
+        e->scanFreeVars(s, binded);
+    }
+}
+
+void ExternRawFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    binded.insert(name->identifier);
+}
 
 //===------------ type checker ---------------======
 //==================================================

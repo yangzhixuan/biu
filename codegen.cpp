@@ -16,63 +16,6 @@ void initCodeGenerator()
     theModule = llvm::make_unique<Module>("biu", llvm::getGlobalContext());
 }
 
-//------------------ ScanFreeVariables ------------//
-
-void ExprAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
-{
-    return;
-}
-
-void SymbolAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
-{
-    if(binded.find(identifier) == binded.end()) {
-        s.insert(make_pair(identifier, symbolType));
-    }
-    return;
-}
-
-void DefineVarFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
-{
-    value->scanFreeVars(s, binded);
-    binded.insert(name->identifier);
-}
-
-void DefineFuncFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
-{
-    std::set<string> newBinded(binded);
-    newBinded.insert(name->identifier);
-    for(const auto & e : argList) {
-        newBinded.insert(e.first->identifier);
-    }
-    for(const auto & e : body) {
-        e->scanFreeVars(s, newBinded);
-    }
-    binded.insert(name->identifier);
-}
-
-void IfFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
-{
-    condition->scanFreeVars(s, binded);
-    auto e1 = std::set<string>(binded);
-    auto e2 = std::set<string>(binded);
-    branch_true->scanFreeVars(s, e1);
-    branch_false->scanFreeVars(s, e2);
-}
-
-void ApplicationFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
-{
-    for(const auto & e : elements) {
-        e->scanFreeVars(s, binded);
-    }
-}
-
-void ExternRawFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
-{
-    binded.insert(name->identifier);
-}
-
-//------------------ ScanFreeVariables ------------//
-
 
 //------------------ Generating Functions ---------//
 Value* ASTBase::codeGen(ValueEnvironment &e) { } 
@@ -116,6 +59,13 @@ Value* DefineVarFormAST::codeGen(ValueEnvironment &e)
     return ConstantInt::getTrue(theModule->getContext());
 }
 
+Value* ExternRawFormAST::codeGen(ValueEnvironment &e)
+{
+    auto g = new GlobalVariable(*theModule, varType->llvmType, false, GlobalValue::ExternalLinkage, nullptr, symbolName->str);
+    e[name->identifier] = Builder.CreateLoad(g);
+    return ConstantInt::getTrue(theModule->getContext());
+}
+
 Value* DefineFuncFormAST::codeGen(ValueEnvironment &e)
 {
     // Create function
@@ -141,18 +91,21 @@ Value* DefineFuncFormAST::codeGen(ValueEnvironment &e)
 
     // Binds free variables (variables in closure)
     auto ite = F->arg_begin();
+    auto strV = Builder.CreateLoad(ite);
     for(auto & freeVarIter : freeVarIndex) {
-        Value *envStruct = Builder.CreateLoad(ite);
-        Value *addr = Builder.CreateStructGEP(envStruct, freeVarIter.second);
-        Value *val = Builder.CreateLoad(addr);
+        //Value *addr = Builder.CreateStructGEP(ite, freeVarIter.second);
+        //Value *val = Builder.CreateLoad(addr);
+        auto val = Builder.CreateExtractValue(strV, { (unsigned) freeVarIter.second });
         newEnv[freeVarIter.first] = val;
     }
 
     // Binds function arguments
     ite++;
+    int argIndex = 0;
     while(ite != F->arg_end()) {
-        newEnv[ite->getName()] = ite;
+        newEnv[argList[argIndex].first->identifier] = ite;
         ite++;
+        argIndex++;
     }
 
     Value* last = nullptr;
@@ -179,6 +132,7 @@ Value* DefineFuncFormAST::codeGen(ValueEnvironment &e)
             Type::getInt64Ty(getGlobalContext()), envType, mallocSize);
     Builder.Insert(var_malloc);
     Value *var = var_malloc;
+    Builder.CreateStore(var, env_v);
 
     // set the closure variables
     for(auto & freeVar : freeVarIndex) {
@@ -205,7 +159,9 @@ Value* ApplicationFormAST::codeGen(ValueEnvironment &e)
     ite++;
     while(ite != elements.end()) {
         // TODO If the argument is a function, cast its type to generic function type
-        args.push_back((*ite) -> codeGen(e));
+        auto arg = (*ite) -> codeGen(e);
+        cerr<<"Arg: "<<arg<<std::endl;
+        args.push_back(arg);
         ite++;
     }
 
