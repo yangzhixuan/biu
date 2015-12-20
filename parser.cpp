@@ -248,12 +248,13 @@ unique_ptr<FormAST> parseForm()
         }
         getNextToken();
         return std::move(form);
-    } else if(curTok == tok_symbol && symbolStr == "extern") {
+    } else if(curTok == tok_symbol && symbolStr == "extern-raw") {
         // extern-form
         getNextToken();
-        auto form = llvm::make_unique<ExternFormAST>();
+        auto form = llvm::make_unique<ExternRawFormAST>();
         form->name = parseSymbol();
         form->type = parseExpr();
+        form->symbolName = parseString();
         if(curTok != ')') {
             parserError(string("parseForm: extern-form expect a ')', get: ") + tok2str(curTok));
             return nullptr;

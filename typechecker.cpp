@@ -1,5 +1,7 @@
 #include "parser.h"
 #include "typechecker.h"
+#include "llvm/Support/raw_ostream.h"
+
 
 std::ostream& operator<<(std::ostream& out, const CheckerError& err)
 {
@@ -7,35 +9,63 @@ std::ostream& operator<<(std::ostream& out, const CheckerError& err)
     return out;
 }
 
+std::ostream& operator<<(std::ostream& out, llvm::Type* t)
+{
+    std::string type_str;
+    llvm::raw_string_ostream rso(type_str);
+    t->print(rso);
+    out<<rso.str();
+    return out;
+}
+
 //===------------ type constants --------------=====
 //==================================================
-auto intType = std::make_shared<Type>("Int");
-auto stringType = std::make_shared<Type>("String");
-auto voidType = std::make_shared<Type>("Void");
-auto boolType = std::make_shared<Type>("Bool");
+auto numberType = std::make_shared<BiuType>("Number", llvm::Type::getDoubleTy(llvm::getGlobalContext()));
+auto stringType = std::make_shared<BiuType>("String");
+auto voidType = std::make_shared<BiuType>("Void", llvm::Type::getVoidTy(llvm::getGlobalContext()));
+auto boolType = std::make_shared<BiuType>("Bool", llvm::Type::getInt1Ty(llvm::getGlobalContext()));
+auto notAType = std::make_shared<BiuType>("__NAT__");
 
 //===------------ types -----------------------=====
 //==================================================
-Type::Type(const std::string& id) : identifier(id)
+BiuType::BiuType(const std::string& id, llvm::Type* llvmType) : identifier(id), llvmType(llvmType)
 {
     hashed_id = std::hash<std::string>()(id);
 }
 
-bool Type::operator==(const Type& h) const
+bool BiuType::operator==(const BiuType& h) const
 {
+    if(hashed_id == notAType->hashed_id
+            || h.hashed_id == notAType->hashed_id) {
+        return false;
+    }
     if(hashed_id != h.hashed_id)
         return false;
     return identifier == h.identifier;
 }
 
-bool Type::operator!=(const Type& h) const
+bool BiuType::operator!=(const BiuType& h) const
 {
     return !(*this == h);
 }
 
-FuncType::FuncType(const std::vector<shared_ptr<Type>>& args, shared_ptr<Type> ret)
+FuncType::FuncType(const std::vector<shared_ptr<BiuType>>& args, shared_ptr<BiuType> ret, llvm::Type *lTy)
     : returnType(ret)
 {
+    if(lTy != nullptr) {
+        llvmType = lTy;
+    } else {
+        std::vector<llvm::Type*> argT;
+        // the first argument is always the environment
+        argT.push_back(llvm::Type::getInt8Ty(llvm::getGlobalContext())->getPointerTo());
+        for(const auto & e : args) {
+            argT.push_back(e->llvmType);
+        }
+        llvmType = llvm::StructType::get(llvm::getGlobalContext(),
+                                            { llvm::FunctionType::get(ret->llvmType, argT, false)->getPointerTo(),
+                                            llvm::Type::getInt8Ty(llvm::getGlobalContext())->getPointerTo(), }, false);
+    }
+
     std::string id;
     id = "(";
     for(const auto& a : args) {
@@ -57,33 +87,33 @@ FuncType::FuncType(const std::vector<shared_ptr<Type>>& args, shared_ptr<Type> r
 //===------------ type checker ---------------======
 //==================================================
 
-shared_ptr<Type> ExprAST::parseType()
+shared_ptr<BiuType> ExprAST::parseType()
 {
     throw(CheckerError("invalid type"));
     return nullptr;
 }
 
-shared_ptr<Type> SymbolAST::parseType()
+shared_ptr<BiuType> SymbolAST::parseType()
 {
     if(identifier == "Bool"){
         return boolType;
     }
 
-    if(identifier == "Int") {
-        return intType;
+    if(identifier == "Number") {
+        return numberType;
     }
     throw(CheckerError("invalid type: " + identifier));
     return nullptr;
 }
 
-shared_ptr<Type> ApplicationFormAST::parseType()
+shared_ptr<BiuType> ApplicationFormAST::parseType()
 {
     if(elements.size() > 1) {
         if(typeid(*elements[0]) == typeid(SymbolAST)){
             SymbolAST *ptr = dynamic_cast<SymbolAST*>(elements[0].get());
             if(ptr->identifier == "->" && elements.size() >= 2) {
-                std::vector<shared_ptr<Type>> argTypes;
-                shared_ptr<Type> retType;
+                std::vector<shared_ptr<BiuType>> argTypes;
+                shared_ptr<BiuType> retType;
                 for(int i = 1; i < elements.size() - 1; i++) {
                     argTypes.push_back( elements[i]->parseType() );
                 }
@@ -97,56 +127,93 @@ shared_ptr<Type> ApplicationFormAST::parseType()
 }
 
 
-shared_ptr<Type> ASTBase::checkType(Environment &e)
+shared_ptr<BiuType> ASTBase::checkType(TypeEnvironment &e)
 {
     return nullptr;
 }
 
-shared_ptr<Type> DefineVarFormAST::checkType(Environment &e)
+shared_ptr<BiuType> DefineVarFormAST::checkType(TypeEnvironment &e)
 {
     // TODO add define-var type annotating
-    e[name->identifier] = value->checkType(e);
-    cerr<<"Type of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
-    return std::make_shared<Type>("Void");
+    varType = e[name->identifier] = value->checkType(e);
+    cerr<<"BiuType of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
+    return std::make_shared<BiuType>("Void");
 }
 
-shared_ptr<Type> DefineFuncFormAST::checkType(Environment &e)
+
+// This function need not only check the function type in biu's type system,
+// it also needs to build the function type in the IR.
+shared_ptr<BiuType> DefineFuncFormAST::checkType(TypeEnvironment &e)
 {
-    shared_ptr<Type> retType;
-    std::vector<shared_ptr<Type>> argTypes;
-    Environment newEnv(e);
+    // Check in biu
+    shared_ptr<BiuType> retType;
+    std::vector<shared_ptr<BiuType>> argTypes;
+    TypeEnvironment newEnv(e);
 
     if(type != nullptr) {
         retType = type->parseType();
     }
 
     for(const auto & a : argList) {
-        shared_ptr<Type> t = a.second->parseType();
+        shared_ptr<BiuType> t = a.second->parseType();
         newEnv[a.first->identifier] = t;
         argTypes.push_back(t);
     }
 
     if(type != nullptr) {
         newEnv[name->identifier] = std::make_shared<FuncType>(argTypes, retType);
+    } else {
+        // If DefineFuncForm doesn't specify the return type, don't allow recursion
+        newEnv[name->identifier] = notAType;
     }
 
-    shared_ptr<Type> lastType;
+    shared_ptr<BiuType> lastType;
     for(const auto & exp : body) {
         lastType = exp->checkType(newEnv);
     }
     if(type != nullptr && !(*lastType == *retType)) {
         throw(CheckerError("function return type mismatch\n"));
     }
-    auto t = std::make_shared<FuncType>(argTypes, lastType);
-    e[name->identifier] = t;
-    cerr<<"Type of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
-    return std::make_shared<Type>("Void");
+
+    // Build type in the IR
+    retTypeIR = lastType->llvmType;
+
+    // In order to get the type in IR, need to identify free variables in IR
+    freeVars.clear();
+    std::set<string> binded;
+    scanFreeVars(freeVars, binded);
+
+    // Construct the type of the closure
+    freeVarIndex.clear();
+    vector<llvm::Type*> freeVarTypes;
+    for(const auto & i : freeVars) {
+        freeVarIndex[i.first] = freeVarIndex.size();
+        freeVarTypes.push_back(i.second->llvmType);
+    }
+    envType = llvm::StructType::get(llvm::getGlobalContext(), freeVarTypes, false);
+
+    // Construct the type of the function in IR
+    funcArgTypeIR.clear();
+    funcArgTypeIR.push_back(envType->getPointerTo());
+    for(const auto & e: argList) {
+        funcArgTypeIR.push_back(e.second->parseType()->llvmType);
+    }
+    flatFuncType = llvm::FunctionType::get(lastType->llvmType, funcArgTypeIR, false);
+
+    funType = std::make_shared<FuncType>(argTypes, lastType);
+    funType->llvmType = llvm::StructType::get(llvm::getGlobalContext(), {flatFuncType->getPointerTo(), envType->getPointerTo()}, false);
+
+    e[name->identifier] = funType;
+    cerr<<"BiuType of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
+    cerr<<"IR type of "<<name->identifier<<" : "<<funType->llvmType<<std::endl;
+
+    return std::make_shared<BiuType>("Void");
 }
 
-shared_ptr<Type> ApplicationFormAST::checkType(Environment &e) {
+shared_ptr<BiuType> ApplicationFormAST::checkType(TypeEnvironment &e) {
     if(elements.size() > 0) {
         auto opType = elements[0]->checkType(e);
-        std::vector<shared_ptr<Type>> argTypes;
+        std::vector<shared_ptr<BiuType>> argTypes;
         for(int i = 1; i < elements.size(); i++) {
             argTypes.push_back(elements[i]->checkType(e));
         }
@@ -171,36 +238,37 @@ shared_ptr<Type> ApplicationFormAST::checkType(Environment &e) {
     return nullptr;
 }
 
-shared_ptr<Type> StringAST::checkType(Environment &e) {
+shared_ptr<BiuType> StringAST::checkType(TypeEnvironment &e) {
     return stringType;
 }
 
-shared_ptr<Type> NumberAST::checkType(Environment &e) {
-    return intType;
+shared_ptr<BiuType> NumberAST::checkType(TypeEnvironment &e) {
+    return numberType;
 }
 
-shared_ptr<Type> SymbolAST::checkType(Environment &e) {
+shared_ptr<BiuType> SymbolAST::checkType(TypeEnvironment &e) {
     if(e.find(identifier) != e.end()) {
-        return e[identifier];
+        return symbolType = e[identifier];
     }
     throw(CheckerError("Cannot resolve type of " + identifier));
     return nullptr;
 }
 
-shared_ptr<Type> ExternFormAST::checkType(Environment &e) {
+shared_ptr<BiuType> ExternRawFormAST::checkType(TypeEnvironment &e) {
     auto t = type->parseType();
-    e[name->identifier] = t;
+    varType = e[name->identifier] = t;
+    cerr<<"IR type of "<<name->identifier<<" : "<<varType->llvmType<<std::endl;
     return voidType;
 }
 
-shared_ptr<Type> IfFormAST::checkType(Environment &e) {
+shared_ptr<BiuType> IfFormAST::checkType(TypeEnvironment &e) {
     auto t = condition->checkType(e);
     if(*t != *boolType) {
         throw(CheckerError("IfForm condition must be bool, got " + t->identifier));
         return nullptr;
     }
-    Environment newEnv1(e);
-    Environment newEnv2(e);
+    TypeEnvironment newEnv1(e);
+    TypeEnvironment newEnv2(e);
     auto b1 = branch_true->checkType(newEnv1);
     auto b2 = branch_false->checkType(newEnv2);
     if(*b1 != *b2) {
@@ -210,7 +278,7 @@ shared_ptr<Type> IfFormAST::checkType(Environment &e) {
     return b1;
 }
 
-shared_ptr<Type> FormsAST::checkType(Environment &e)
+shared_ptr<BiuType> FormsAST::checkType(TypeEnvironment &e)
 {
     for(const auto & f : forms) {
         f->checkType(e);

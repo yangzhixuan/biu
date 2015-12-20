@@ -5,8 +5,10 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <set>
 #include "typechecker.h"
 #include "common.h"
+#include "codegen.h"
 
 using std::cin;
 using std::cout;
@@ -47,13 +49,15 @@ class ParserError : public Error {
 class ASTBase {
     public:
         virtual ~ASTBase() = 0;
-        virtual shared_ptr<Type> checkType(Environment &e) /*= 0*/;
+        virtual shared_ptr<BiuType> checkType(TypeEnvironment &e) /*= 0*/;
+        virtual Value *codeGen(ValueEnvironment &e);
 };
 
 class ExprAST : public ASTBase {
     public:
         virtual ~ExprAST() = 0;
-        virtual shared_ptr<Type> parseType();
+        virtual shared_ptr<BiuType> parseType();
+        virtual void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded);
 };
 
 class AtomicAST : public ExprAST {
@@ -66,22 +70,29 @@ class NumberAST : public AtomicAST {
     public:
         double value;
         NumberAST(double value) : value(value) {}
-        shared_ptr<Type> checkType(Environment &e) override;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        Value *codeGen(ValueEnvironment &e) override;
 };
 
 class StringAST : public AtomicAST {
     public:
         string str;
         StringAST(string str) : str(str) {}
-        shared_ptr<Type> checkType(Environment &e) override;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        Value *codeGen(ValueEnvironment &e) override;
 };
 
 class SymbolAST: public AtomicAST {
     public:
         string identifier;
         SymbolAST(string str) : identifier(str) {}
-        shared_ptr<Type> parseType() override;
-        shared_ptr<Type> checkType(Environment &e) override;
+        shared_ptr<BiuType> parseType() override;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        Value *codeGen(ValueEnvironment &e) override;
+        void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
+
+        shared_ptr<BiuType> symbolType;
+
 };
 
 class FormAST : public ExprAST {
@@ -93,8 +104,10 @@ class FormAST : public ExprAST {
 class ApplicationFormAST : public FormAST {
     public:
         vector<unique_ptr<ExprAST>> elements;
-        shared_ptr<Type> checkType(Environment &e) override;
-        shared_ptr<Type> parseType() override;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        shared_ptr<BiuType> parseType() override;
+        Value *codeGen(ValueEnvironment &e) override;
+        void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
 };
 
 class DefineFuncFormAST : public FormAST {
@@ -104,33 +117,60 @@ class DefineFuncFormAST : public FormAST {
         vector<pair<unique_ptr<SymbolAST>, unique_ptr<ExprAST>>> argList;
         vector<unique_ptr<ExprAST>> body;
 
-        shared_ptr<Type> checkType(Environment &e) override;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        Value *codeGen(ValueEnvironment &e) override;
+        void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
+
+    private:
+        std::set<pair<string, shared_ptr<BiuType>>> freeVars;
+        std::map<string, int> freeVarIndex;
+
+        shared_ptr<FuncType> funType;
+
+        llvm::Type *envType;
+        std::vector<llvm::Type*> funcArgTypeIR;
+        llvm::Type* retTypeIR;
+        llvm::FunctionType* flatFuncType;
 };
 
 class DefineVarFormAST : public FormAST {
     public:
         unique_ptr<SymbolAST> name;
         unique_ptr<ExprAST> value;
-        shared_ptr<Type> checkType(Environment &e) override;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        Value *codeGen(ValueEnvironment &e) override;
+        void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
+
+    private:
+        shared_ptr<BiuType> varType;
 };
 
-class ExternFormAST: public FormAST {
-public:
-    unique_ptr<SymbolAST> name;
-    unique_ptr<ExprAST> type;
-    shared_ptr<Type> checkType(Environment &e) override;
+class ExternRawFormAST: public FormAST {
+    public:
+        unique_ptr<SymbolAST> name;
+        unique_ptr<ExprAST> type;
+        unique_ptr<StringAST> symbolName;
+
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        Value *codeGen(ValueEnvironment &e) override;
+        void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
+
+    private:
+        shared_ptr<BiuType> varType;
 };
 
 class IfFormAST : public FormAST {
     public:
         unique_ptr<ExprAST> condition, branch_true, branch_false;
-        shared_ptr<Type> checkType(Environment &e) override;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
 };
 
 class FormsAST : public ASTBase {
     public:
         vector<unique_ptr<FormAST>> forms;
-        shared_ptr<Type> checkType(Environment &e) override;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        Value *codeGen(ValueEnvironment &e) override;
 };
 
 // =====--------  Parser Part -------===================

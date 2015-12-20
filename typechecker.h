@@ -5,25 +5,28 @@
 #include <unordered_map>
 #include <string>
 #include "common.h"
+#include "llvm/IR/Type.h"
 
-class Type {
+class BiuType {
     public:
-        Type(const std::string& identifier);
-        bool operator==(const Type &h) const;
-        bool operator!=(const Type &h) const;
+        BiuType(const std::string& identifier, llvm::Type *llvmType = nullptr);
+        bool operator==(const BiuType &h) const;
+        bool operator!=(const BiuType &h) const;
 
         std::string identifier;
         int hashed_id;
-        Type() = default;
-        virtual ~Type() = default;
+        BiuType() = default;
+        virtual ~BiuType() = default;
+
+        llvm::Type* llvmType;
 };
 
-class FuncType : public Type {
+class FuncType : public BiuType {
     public:
-        std::vector<std::shared_ptr<Type>> argTypes;
-        std::shared_ptr<Type> returnType;
+        std::vector<std::shared_ptr<BiuType>> argTypes;
+        std::shared_ptr<BiuType> returnType;
 
-        FuncType(const std::vector<std::shared_ptr<Type>>& args, std::shared_ptr<Type> ret);
+        FuncType(const std::vector<std::shared_ptr<BiuType>>& args, std::shared_ptr<BiuType> ret, llvm::Type *llvmType = nullptr);
 };
 
 class CheckerError: public Error {
@@ -33,5 +36,6 @@ class CheckerError: public Error {
 
 
 std::ostream& operator<<(std::ostream& out, const CheckerError& err);
-typedef std::map<std::string, std::shared_ptr<Type>> Environment;
+std::ostream& operator<<(std::ostream& out, llvm::Type* t);
+typedef std::map<std::string, std::shared_ptr<BiuType>> TypeEnvironment;
 #endif

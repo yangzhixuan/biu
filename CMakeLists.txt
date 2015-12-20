@@ -9,6 +9,8 @@ set(SOURCE_FILES
     parser.cpp
     parser.h
     typechecker.cpp
-    typechecker.h)
+    typechecker.h
+    codegen.cpp
+    codegen.h)
 
 add_executable(biu ${SOURCE_FILES})

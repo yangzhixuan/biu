@@ -4,8 +4,9 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/biuc.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/codegen.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/codegen.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/common.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/kaleid_parser.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/parser.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/parser.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/typechecker.cpp" isTestSource="false" />

@@ -1,20 +1,20 @@
-(extern + (-> Int Int Int))
-(extern - (-> Int Int Int))
-(extern * (-> Int Int Int))
-(extern / (-> Int Int Int))
-(extern == (-> Int Int Bool))
+(extern + (-> Number Number Number))
+(extern - (-> Number Number Number))
+(extern * (-> Number Number Number))
+(extern / (-> Number Number Number))
+(extern == (-> Number Number Bool))
 
-(define (square (x Int))
+(define (square (x Number))
   (* x x))
 
 (square 5)
 
-(define (transform 
-          (x Int) 
-          (f (-> Int Int)))
+(define (transform
+          (x Number)
+          (f (-> Number Number)))
   (f x))
 
-(define ((fact Int) (n Int))
+(define ((fact Number) (n Number))
   (if (== n 0)
     0
     (* n (fact (- n 1)))))

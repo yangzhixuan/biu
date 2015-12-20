@@ -1,0 +1,14 @@
+;(extern-raw + (-> Number Number Number) "add")
+;(extern-raw - (-> Number Number Number) "sub")
+;(extern-raw * (-> Number Number Number) "mul")
+;(extern-raw / (-> Number Number Number) "div")
+;(extern-raw == (-> Number Number Bool) "equal")
+
+(define x 1)
+
+(define (myadder)
+  (define (g (y Number))
+    5)
+  g)
+
+((myadder) 1)
