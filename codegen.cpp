@@ -3,6 +3,7 @@
 #include "typechecker.h"
 #include <memory>
 #include <set>
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -14,6 +15,11 @@ IRBuilder<> Builder(llvm::getGlobalContext());
 void initCodeGenerator()
 {
     theModule = llvm::make_unique<Module>("biu", llvm::getGlobalContext());
+    LLVMInitializeNativeTarget();
+    LLVMInitializeAllTargets();
+    LLVMInitializeAllTargetMCs();
+    LLVMInitializeAllAsmPrinters();
+    LLVMInitializeAllAsmParsers();
 }
 
 
@@ -137,7 +143,17 @@ Value* DefineFuncFormAST::codeGen(ValueEnvironment &e)
     // set the closure variables
     for(auto & freeVar : freeVarIndex) {
         auto ele_v = Builder.CreateStructGEP(var, freeVar.second);
-        Builder.CreateStore(e[freeVar.first], ele_v);
+        if(freeVar.first == name->identifier) {
+            // a recursive function, this free variable refers the function itself
+            auto fp_v_rec = Builder.CreateStructGEP(ele_v, 0);
+            auto env_v_rec = Builder.CreateStructGEP(ele_v, 1);
+            env_v_rec = Builder.CreateBitCast(env_v_rec, var->getType()->getPointerTo());
+            fp_v_rec = Builder.CreateBitCast(fp_v_rec, F->getType()->getPointerTo());
+            Builder.CreateStore(var, env_v_rec);
+            Builder.CreateStore(F, fp_v_rec);
+        } else {
+            Builder.CreateStore(e[freeVar.first], ele_v);
+        }
     }
     e[name->identifier] = Builder.CreateLoad(closure_v);
     return ConstantInt::getTrue(theModule->getContext());
@@ -160,7 +176,6 @@ Value* ApplicationFormAST::codeGen(ValueEnvironment &e)
     while(ite != elements.end()) {
         // TODO If the argument is a function, cast its type to generic function type
         auto arg = (*ite) -> codeGen(e);
-        cerr<<"Arg: "<<arg<<std::endl;
         args.push_back(arg);
         ite++;
     }

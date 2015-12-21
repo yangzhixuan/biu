@@ -1,19 +1,23 @@
 (extern-raw + (-> Number Number Number) "add")
-;(extern-raw - (-> Number Number Number) "sub")
-;(extern-raw * (-> Number Number Number) "mul")
-;(extern-raw / (-> Number Number Number) "div")
+(extern-raw - (-> Number Number Number) "sub")
+(extern-raw * (-> Number Number Number) "mul")
+(extern-raw / (-> Number Number Number) "div")
 (extern-raw == (-> Number Number Bool) "equal")
 (extern-raw print (-> Number Number) "print")
 
 
+(define (myadder (x Number))
+  (define (g (y Number))
+    (+ x y))
+  g)
 
-;(define (myadder (x Number))
-;  (define (g (y Number))
-;    (+ x y))
-;  g)
-;
-;(define add5 (myadder 5))
-;
-;(print (add5 1))
-;
-(print (if (== 1 1) 1 2))
+(define add5 (myadder 5))
+
+(print (add5 1))
+
+(define ((fact Number) (n Number))
+  (if (== n 0)
+    1
+    (* n (fact (- n 1)))))
+
+(print (fact 5))

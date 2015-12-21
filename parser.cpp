@@ -146,7 +146,7 @@ ExprAST::~ExprAST() {}
 static int curTok;
 static int getNextToken() 
 {
-    printf("consume: %s\n", tok2str(curTok).c_str());
+    // printf("consume: %s\n", tok2str(curTok).c_str());
     curTok = getToken();
     return curTok;
 }

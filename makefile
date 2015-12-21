@@ -1,21 +1,21 @@
-CXXFLAGS = -std=c++14 -g `llvm-config --cxxflags --ldflags --system-libs --libs core`
+CXXFLAGS = -std=c++14 -g `llvm-config --cxxflags --ldflags --system-libs --libs`
 
 all : biuc
 
 biuc : biuc.o parser.o typechecker.o codegen.o
-	g++ $(CXXFLAGS) $^ -o $@
+	g++ $^ $(CXXFLAGS) -o $@
 
 biuc.o : biuc.cpp 
-	g++ $(CXXFLAGS) -c biuc.cpp -o $@
+	g++ -c biuc.cpp $(CXXFLAGS) -o $@
 
 typechecker.o : typechecker.cpp typechecker.h
-	g++ $(CXXFLAGS) -c typechecker.cpp -o $@
+	g++ -c typechecker.cpp $(CXXFLAGS) -o $@
 
 parser.o : parser.cpp parser.h
-	g++ $(CXXFLAGS) -c parser.cpp -o $@
+	g++ -c parser.cpp $(CXXFLAGS) -o $@
 
 codegen.o : codegen.cpp codegen.h
-	g++ $(CXXFLAGS) -c codegen.cpp -o $@
+	g++ -c codegen.cpp $(CXXFLAGS) -o $@
 
 clean : 
 	rm -f biuc *.o

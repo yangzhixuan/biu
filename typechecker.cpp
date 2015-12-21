@@ -191,7 +191,8 @@ shared_ptr<BiuType> DefineVarFormAST::checkType(TypeEnvironment &e)
 {
     // TODO add define-var type annotating
     varType = e[name->identifier] = value->checkType(e);
-    cerr<<"BiuType of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
+    cerr<<"Biu type of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
+    cerr<<"IR type of "<<name->identifier<<" : "<<e[name->identifier]->llvmType<<std::endl<<std::endl;
     return std::make_shared<BiuType>("Void");
 }
 
@@ -237,6 +238,11 @@ shared_ptr<BiuType> DefineFuncFormAST::checkType(TypeEnvironment &e)
     freeVars.clear();
     std::set<string> binded;
     scanFreeVars(freeVars, binded);
+    if(type != nullptr) {
+        // this maybe a recursive function, add the function name in the envrionment
+        // TODO add this free variable in need (i.e. this function is indeed recursive)
+        freeVars.insert(make_pair(name->identifier, std::make_shared<FuncType>(argTypes, retType)));
+    }
 
     // Construct the type of the closure
     freeVarIndex.clear();
@@ -260,7 +266,7 @@ shared_ptr<BiuType> DefineFuncFormAST::checkType(TypeEnvironment &e)
 
     e[name->identifier] = funType;
     cerr<<"BiuType of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
-    cerr<<"IR type of "<<name->identifier<<" : "<<funType->llvmType<<std::endl;
+    cerr<<"IR type of "<<name->identifier<<" : "<<funType->llvmType<<std::endl<<std::endl;
 
     return std::make_shared<BiuType>("Void");
 }
@@ -312,7 +318,8 @@ shared_ptr<BiuType> SymbolAST::checkType(TypeEnvironment &e) {
 shared_ptr<BiuType> ExternRawFormAST::checkType(TypeEnvironment &e) {
     auto t = type->parseType();
     varType = e[name->identifier] = t;
-    cerr<<"IR type of "<<name->identifier<<" : "<<varType->llvmType<<std::endl;
+    cerr<<"Biu type of "<<name->identifier<<" : "<<varType->identifier<<std::endl;
+    cerr<<"IR type of "<<name->identifier<<" : "<<varType->llvmType<<std::endl<<std::endl;;
     return voidType;
 }
 
