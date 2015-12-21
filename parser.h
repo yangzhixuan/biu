@@ -164,6 +164,9 @@ class IfFormAST : public FormAST {
         unique_ptr<ExprAST> condition, branch_true, branch_false;
         shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
         void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
+        Value *codeGen(ValueEnvironment &e) override;
+    private:
+        shared_ptr<BiuType> retType;
 };
 
 class FormsAST : public ASTBase {

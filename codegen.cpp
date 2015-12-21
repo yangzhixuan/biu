@@ -168,3 +168,46 @@ Value* ApplicationFormAST::codeGen(ValueEnvironment &e)
     return Builder.CreateCall(fp, args);
 }
 
+Value* IfFormAST::codeGen(ValueEnvironment &e)
+{
+    auto cond = condition->codeGen(e);
+    Function *theFunction = Builder.GetInsertBlock()->getParent();
+
+    BasicBlock *thenBB =
+        BasicBlock::Create(getGlobalContext(), "then", theFunction);
+    BasicBlock *elseBB = BasicBlock::Create(getGlobalContext(), "else");
+    BasicBlock *mergeBB = BasicBlock::Create(getGlobalContext(), "ifcont");
+
+    Builder.CreateCondBr(cond, thenBB, elseBB);
+
+    // Emit then value.
+    Builder.SetInsertPoint(thenBB);
+
+    ValueEnvironment newEnv1(e);
+    auto thenV = branch_true->codeGen(newEnv1);
+
+    Builder.CreateBr(mergeBB);
+    // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+    thenBB = Builder.GetInsertBlock();
+
+    // Emit else block.
+    theFunction->getBasicBlockList().push_back(elseBB);
+    Builder.SetInsertPoint(elseBB);
+
+    ValueEnvironment newEnv2(e);
+    auto elseV = branch_false->codeGen(newEnv2);
+
+    Builder.CreateBr(mergeBB);
+    // Codegen of 'Else' can change the current block, update ElseBB for the PHI.
+    elseBB = Builder.GetInsertBlock();
+
+    // Emit merge block.
+    theFunction->getBasicBlockList().push_back(mergeBB);
+    Builder.SetInsertPoint(mergeBB);
+    PHINode *PN =
+        Builder.CreatePHI(retType->llvmType, 2, "iftmp");
+
+    PN->addIncoming(thenV, thenBB);
+    PN->addIncoming(elseV, elseBB);
+    return PN;
+}

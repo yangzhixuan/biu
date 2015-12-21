@@ -5,12 +5,20 @@ typedef struct closureType{
     void *env;
 } closure;
 
+
 double add_func(void* env, double a, double b)
 {
     return a+b;
 }
 
 closure add = {add_func, (void*)0};
+
+char equal_func(void* env, double a, double b)
+{
+    return a==b;
+}
+
+closure equal = {equal_func, (void*)0};
 
 double printnumber_func(void* env, double a)
 {

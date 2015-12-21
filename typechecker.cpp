@@ -330,7 +330,7 @@ shared_ptr<BiuType> IfFormAST::checkType(TypeEnvironment &e) {
         throw(CheckerError("IfForm type of branches mismatch, got " + b1->identifier + " and " + b2->identifier));
         return nullptr;
     }
-    return b1;
+    return retType = b1;
 }
 
 shared_ptr<BiuType> FormsAST::checkType(TypeEnvironment &e)
