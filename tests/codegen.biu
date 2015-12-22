@@ -5,7 +5,12 @@
 (extern-raw sin (-> Number Number) "__sin")
 (extern-raw == (-> Number Number Bool) "equal")
 (extern-raw print (-> Number Number) "print")
-
+(extern-raw cos (-> Number Number) "cosclosure")
+(extern-raw sin (-> Number Number) "sinclosure")
+(extern-raw getchar (-> Char) "getcharclosure")
+(extern-raw putchar (-> Char Number) "putcharclosure")
+(extern-raw numbertochar (-> Number Char) "numbertocharclosure")
+(extern-raw chartonumber (-> Char Number) "chartonumberclosure")
 
 ;(define (myadder (x Number))
 ;  (define (g (y Number))

@@ -26,7 +26,7 @@ Value* ASTBase::codeGen(ValueEnvironment &e) { return nullptr; }
 Value* FormsAST::codeGen(ValueEnvironment &e)
 {
     auto mainSignature = FunctionType::get(Type::getInt32Ty(getGlobalContext()), {}, false);
-    Function *F = Function::Create(mainSignature, Function::ExternalLinkage, 
+    Function *F = Function::Create(mainSignature, Function::ExternalLinkage,
             "main", theModule.get());
 
     // Create Basic block
@@ -40,9 +40,19 @@ Value* FormsAST::codeGen(ValueEnvironment &e)
     return ret;
 }
 
+Value* BoolAST::codeGen(ValueEnvironment &e)
+{
+    return ConstantInt::get(llvm::Type::getInt1Ty(llvm::getGlobalContext()), value);
+}
+
 Value* NumberAST::codeGen(ValueEnvironment &e)
 {
     return ConstantFP::get(theModule->getContext(), APFloat(value));
+}
+
+Value* CharAST::codeGen(ValueEnvironment &e)
+{
+    return ConstantInt::get(llvm::Type::getInt8Ty(llvm::getGlobalContext()), value);
 }
 
 Value* StringAST::codeGen(ValueEnvironment &e)
@@ -135,7 +145,7 @@ Value* DefineFuncFormAST::codeGen(ValueEnvironment &e)
 {
     // Create function
     // TODO: use a hashed unique name instead of the original name
-    Function *F = Function::Create(flatFuncType, Function::ExternalLinkage, 
+    Function *F = Function::Create(flatFuncType, Function::ExternalLinkage,
             name->identifier, theModule.get());
 
     int idx = 0;
