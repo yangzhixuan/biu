@@ -4,7 +4,12 @@
 (extern-raw / (-> Number Number Number) "div")
 (extern-raw == (-> Number Number Bool) "equal")
 (extern-raw print (-> Number Number) "print")
-
+(extern-raw cos (-> Number Number) "cosclosure")
+(extern-raw sin (-> Number Number) "sinclosure")
+(extern-raw getchar (-> Char) "getcharclosure")
+(extern-raw putchar (-> Char Number) "putcharclosure")
+(extern-raw numbertochar (-> Number Char) "numbertocharclosure")
+(extern-raw chartonumber (-> Char Number) "chartonumberclosure")
 
 (define (myadder (x Number))
   (define (g (y Number))
@@ -21,3 +26,20 @@
     (* n (fact (- n 1)))))
 
 (print (fact 5))
+(print (cos 3.1415926))
+
+(define a (getchar))
+(putchar a)
+
+(putchar '\n')
+(define (Upper (c Char))
+  5)
+
+(print (Upper a))
+
+(print (chartonumber a))
+
+(define b true)
+(print (if b
+  1
+  0))

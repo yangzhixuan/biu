@@ -31,7 +31,9 @@ enum Token {
     tok_symbol = -2,
     tok_number = -3,
     tok_string = -4,
-    tok_error = -5
+    tok_error = -5,
+    tok_char = -6,
+    tok_bool = -7
 };
 
 static int getToken();
@@ -66,10 +68,26 @@ class AtomicAST : public ExprAST {
         virtual ~AtomicAST() = 0;
 };
 
+class BoolAST : public AtomicAST {
+    public:
+        bool value;
+        BoolAST(bool value) : value(value) {}
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        Value *codeGen(ValueEnvironment &e) override;
+};
+
 class NumberAST : public AtomicAST {
     public:
         double value;
         NumberAST(double value) : value(value) {}
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        Value *codeGen(ValueEnvironment &e) override;
+};
+
+class CharAST : public AtomicAST {
+    public:
+        char value;
+        CharAST(char value) : value(value) {}
         shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
         Value *codeGen(ValueEnvironment &e) override;
 };
@@ -182,7 +200,9 @@ class FormsAST : public ASTBase {
 unique_ptr<FormsAST> parseForms();
 unique_ptr<FormAST> parseForm();
 unique_ptr<ExprAST> parseExpr();
+unique_ptr<BoolAST> parseBool();
 unique_ptr<NumberAST> parseNumber();
+unique_ptr<CharAST> parseChar();
 unique_ptr<StringAST> parseString();
 unique_ptr<SymbolAST> parseSymbol();
 static void parserError(const string& info);

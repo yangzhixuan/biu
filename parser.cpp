@@ -8,6 +8,8 @@
 static double numVal;
 static string symbolStr;
 static string stringStr;
+static char currentChar;
+static bool currentBool;
 
 static int validSymbolChar(int c)
 {
@@ -17,6 +19,16 @@ static int validSymbolChar(int c)
 }
 
 // gettok: return the next token from the standard input
+static bool isescaped(int c)
+{
+    return c == 'n' || c == '\'';
+}
+static int transChar(int c)
+{
+    if (c == 'n')
+        return '\n';
+    return '\'';
+}
 static int getToken()
 {
     static int lastChar = ' ';
@@ -31,6 +43,14 @@ static int getToken()
             symbolStr += lastChar;
             lastChar = getchar();
         } while(validSymbolChar(lastChar) || isdigit(lastChar));
+        if (symbolStr == "true" || symbolStr == "false")
+        {
+            if (symbolStr == "true")
+                currentBool = true;
+            else
+                currentBool = false;
+            return tok_bool;
+        }
         return tok_symbol;
     }
 
@@ -45,6 +65,44 @@ static int getToken()
         const char* endpoint;
         numVal = strtod(numStr.c_str(), nullptr);
         return tok_number;
+    }
+
+    if(lastChar == '\'') {
+        // char : include '\n', '\'';
+        currentChar = ' ';
+        bool escaped;
+        escaped = false;
+        lastChar = getchar();
+        if(lastChar == '\\') {
+            lastChar = getchar();
+            if(isescaped(lastChar)) {
+                escaped = true;
+            } else {
+                lexerError(string("Invalid escape character: ") + (char)lastChar);
+                return tok_error;
+            }
+        }
+        if((!escaped && lastChar != '\'') && lastChar != EOF) {
+            currentChar = lastChar;
+        }
+        else if ((!escaped && lastChar == '\'') && lastChar != EOF){
+            lexerError(string("Empty character constant"));
+            return tok_error;
+        }
+        else if (escaped && lastChar != EOF){
+            currentChar = transChar(lastChar);
+        }
+
+        lastChar = getchar();
+        if(lastChar == '\'') {
+            lastChar = getchar();
+        }
+        else{
+            lexerError(string("Nonterminated char: ") + currentChar);
+            return tok_error;
+        }
+
+        return tok_char;
     }
 
     if(lastChar == '"') {
@@ -65,7 +123,11 @@ static int getToken()
             }
             if((!escaped && lastChar != '"') && lastChar != EOF) {
                 stringStr += lastChar;
-            } else {
+            }
+            else if (escaped  && lastChar != EOF){
+                stringStr += '"';
+            }
+            else{
                 break;
             }
         } while(true);
@@ -115,6 +177,10 @@ static string tok2str(int tok)
             return "tok_string";
         case tok_symbol:
             return "tok_symbol(" + symbolStr + ")";
+        case tok_char:
+            return "tok_char";
+        case tok_bool:
+            return "tok_bool";
         default:
             string ret = "";
             ret += tok;
@@ -144,7 +210,7 @@ ExprAST::~ExprAST() {}
 // =====--------  Parser Part ------===================
 // =====----------------------------===================
 static int curTok;
-static int getNextToken() 
+static int getNextToken()
 {
     // printf("consume: %s\n", tok2str(curTok).c_str());
     curTok = getToken();
@@ -286,15 +352,33 @@ unique_ptr<ExprAST> parseExpr()
             return parseString();
         case tok_symbol:
             return parseSymbol();
+        case tok_char:
+            return parseChar();
+        case tok_bool:
+            return parseBool();
         default:
             parserError(string("unexpected character: ") + tok2str(curTok));
             return nullptr;
     }
 }
 
+unique_ptr<BoolAST> parseBool()
+{
+    auto result = llvm::make_unique<BoolAST>(currentBool);
+    getNextToken();
+    return result;
+}
+
 unique_ptr<NumberAST> parseNumber()
 {
     auto result = llvm::make_unique<NumberAST>(numVal);
+    getNextToken();
+    return result;
+}
+
+unique_ptr<CharAST> parseChar()
+{
+    auto result = llvm::make_unique<CharAST>(currentChar);
     getNextToken();
     return result;
 }
@@ -314,7 +398,7 @@ unique_ptr<SymbolAST> parseSymbol()
 }
 
 
-static void parserError(const string& info) 
+static void parserError(const string& info)
 {
     throw(ParserError(info));
 }

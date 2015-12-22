@@ -24,6 +24,7 @@ auto numberType = std::make_shared<BiuType>("Number", llvm::Type::getDoubleTy(ll
 auto stringType = std::make_shared<BiuType>("String");
 auto voidType = std::make_shared<BiuType>("Void", llvm::Type::getVoidTy(llvm::getGlobalContext()));
 auto boolType = std::make_shared<BiuType>("Bool", llvm::Type::getInt1Ty(llvm::getGlobalContext()));
+auto charType = std::make_shared<BiuType>("Char", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
 auto notAType = std::make_shared<BiuType>("__NAT__");
 
 //===------------ types -----------------------=====
@@ -63,7 +64,7 @@ FuncType::FuncType(const std::vector<shared_ptr<BiuType>>& args, shared_ptr<BiuT
         }
         llvmType = llvm::StructType::get(llvm::getGlobalContext(),
                                             { llvm::FunctionType::get(ret->llvmType, argT, false)->getPointerTo(),
-                                            llvm::Type::getInt8Ty(llvm::getGlobalContext())->getPointerTo(), }, false);
+                                            llvm::Type::getInt8Ty(llvm::getGlobalContext())->getPointerTo()}, false);
     }
 
     std::string id;
@@ -157,9 +158,14 @@ shared_ptr<BiuType> SymbolAST::parseType()
     if(identifier == "Number") {
         return numberType;
     }
+    if(identifier == "Char"){
+        return charType;
+    }
     throw(CheckerError("invalid type: " + identifier));
     return nullptr;
 }
+
+
 
 shared_ptr<BiuType> ApplicationFormAST::parseType()
 {
@@ -305,6 +311,14 @@ shared_ptr<BiuType> StringAST::checkType(TypeEnvironment &e) {
 
 shared_ptr<BiuType> NumberAST::checkType(TypeEnvironment &e) {
     return numberType;
+}
+
+shared_ptr<BiuType> CharAST::checkType(TypeEnvironment &e) {
+    return charType;
+}
+
+shared_ptr<BiuType> BoolAST::checkType(TypeEnvironment &e) {
+    return boolType;
 }
 
 shared_ptr<BiuType> SymbolAST::checkType(TypeEnvironment &e) {
