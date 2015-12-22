@@ -36,8 +36,8 @@ static int getToken()
         lastChar = getchar();
     }
 
-    if(validSymbolChar(lastChar)) {
-        // symbol: [SymbolChar][SymbolChar,0-9]+
+    if(validSymbolChar(lastChar) && lastChar != '-') {
+        // symbol: [SymbolChar^-][SymbolChar,0-9]+
         symbolStr = "";
         do {
             symbolStr += lastChar;
@@ -54,8 +54,8 @@ static int getToken()
         return tok_symbol;
     }
 
-    if(isdigit(lastChar)) {
-        // number: [0-9]+(.[0-9]+)?
+    if(isdigit(lastChar) || lastChar == '-') {
+        // number: -?[0-9]+(.[0-9]+)?
         string numStr = "";
         do {
             numStr += lastChar;

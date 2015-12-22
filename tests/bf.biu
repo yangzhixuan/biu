@@ -1,0 +1,33 @@
+(extern-raw + (=> Number Number Number) "add")
+(extern-raw - (=> Number Number Number) "sub")
+(extern-raw * (=> Number Number Number) "mul")
+(extern-raw / (=> Number Number Number) "div")
+(extern-raw sin (=> Number Number) "__sin")
+(extern-raw == (=> Number Number Bool) "equal")
+(extern-raw print (=> Number Number) "print")
+(extern-raw cos (=> Number Number) "cosclosure")
+(extern-raw sin (=> Number Number) "sinclosure")
+(extern-raw getchar (=> Char) "getcharclosure")
+(extern-raw putchar (=> Char Number) "putcharclosure")
+(extern-raw number->char (=> Number Char) "numbertocharclosure")
+(extern-raw char->number (=> Char Number) "chartonumberclosure")
+
+
+(define ((read_program Number)
+         (program (Array Char))
+         (index Number))
+
+  (define (save-char (c Char))
+    (set! program index c)
+    (read_program program (+ index 1)))
+
+  (define c (getchar))
+
+  (if (== (char->number c) -1)
+    index
+    (save-char c)))
+
+(define program (make-array Char 10000))
+
+(define length (read_program program 0))
+

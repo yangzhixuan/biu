@@ -11,7 +11,6 @@ typedef struct array_tag{
 
 void __make_array_func(array* a, double num_ele_d, size_t type_size)
 {
-    printf("allocate: %f element with size %ld\n", num_ele_d, type_size);
     if(num_ele_d < 0 || (size_t)num_ele_d != num_ele_d) {
         fprintf(stderr, "invalid array length: %f\n", num_ele_d);
         exit(1);

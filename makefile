@@ -1,5 +1,5 @@
 CC=clang++
-CXXFLAGS = -std=c++14  -g `llvm-config-3.6 --cxxflags --ldflags --system-libs --libs` -fexceptions
+CXXFLAGS = -std=c++14  -g `llvm-config --cxxflags --ldflags --system-libs --libs` -fexceptions
 
 all : biuc
 
@@ -19,4 +19,5 @@ codegen.o : codegen.cpp codegen.h
 	$(CC) -c codegen.cpp $(CXXFLAGS) -o $@
 
 clean : 
-	rm -f biuc *.o *.ll *.s
+	rm -f biuc *.o *.ll *.s out
+

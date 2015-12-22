@@ -209,7 +209,7 @@ shared_ptr<BiuType> ApplicationFormAST::parseType()
     if(elements.size() > 1) {
         if(typeid(*elements[0]) == typeid(SymbolAST)){
             SymbolAST *ptr = dynamic_cast<SymbolAST*>(elements[0].get());
-            if(ptr->identifier == "->" && elements.size() >= 2) {
+            if(ptr->identifier == "=>" && elements.size() >= 2) {
                 std::vector<shared_ptr<BiuType>> argTypes;
                 shared_ptr<BiuType> retType;
                 for(int i = 1; i < elements.size() - 1; i++) {
@@ -223,7 +223,7 @@ shared_ptr<BiuType> ApplicationFormAST::parseType()
             }
         }
     }
-    throw(CheckerError("invalid type"));
+    throw(CheckerError("invalid type!"));
     return nullptr;
 }
 
