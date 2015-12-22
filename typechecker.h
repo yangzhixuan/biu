@@ -29,6 +29,13 @@ class FuncType : public BiuType {
         FuncType(const std::vector<std::shared_ptr<BiuType>>& args, std::shared_ptr<BiuType> ret, llvm::Type *llvmType = nullptr);
 };
 
+class ArrayType : public BiuType {
+    public:
+        std::shared_ptr<BiuType> eleType;
+        size_t eleSize;
+        ArrayType(std::shared_ptr<BiuType> eleType);
+};
+
 class CheckerError: public Error {
     public:
         CheckerError(std::string str) : Error(str) {}
@@ -38,4 +45,11 @@ class CheckerError: public Error {
 std::ostream& operator<<(std::ostream& out, const CheckerError& err);
 std::ostream& operator<<(std::ostream& out, llvm::Type* t);
 typedef std::map<std::string, std::shared_ptr<BiuType>> TypeEnvironment;
+
+extern std::shared_ptr<BiuType> numberType;
+extern std::shared_ptr<BiuType> stringType;
+extern std::shared_ptr<BiuType> voidType;
+extern std::shared_ptr<BiuType> boolType;
+extern std::shared_ptr<BiuType> notAType;
+extern std::shared_ptr<BiuType> sizeTType;
 #endif

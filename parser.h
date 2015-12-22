@@ -169,6 +169,38 @@ class IfFormAST : public FormAST {
         shared_ptr<BiuType> retType;
 };
 
+class MakeArrayAST : public FormAST {
+    public:
+        unique_ptr<ExprAST> eleTypeExpr, numEleExpr;
+
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
+        Value *codeGen(ValueEnvironment &e) override;
+    private:
+        shared_ptr<BiuType> eleType;
+        shared_ptr<ArrayType> arrType;
+};
+
+class SetIndexAST : public FormAST {
+    public:
+        unique_ptr<ExprAST> array, index, element;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
+        Value *codeGen(ValueEnvironment &e) override;
+    private:
+        shared_ptr<ArrayType> arrType;
+};
+
+class GetIndexAST : public FormAST {
+    public:
+        unique_ptr<ExprAST> array, index;
+        shared_ptr<BiuType> checkType(TypeEnvironment &e) override;
+        void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
+        Value *codeGen(ValueEnvironment &e) override;
+    private:
+        shared_ptr<ArrayType> arrType;
+};
+
 class FormsAST : public ASTBase {
     public:
         vector<unique_ptr<FormAST>> forms;

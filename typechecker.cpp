@@ -25,6 +25,10 @@ auto stringType = std::make_shared<BiuType>("String");
 auto voidType = std::make_shared<BiuType>("Void", llvm::Type::getVoidTy(llvm::getGlobalContext()));
 auto boolType = std::make_shared<BiuType>("Bool", llvm::Type::getInt1Ty(llvm::getGlobalContext()));
 auto notAType = std::make_shared<BiuType>("__NAT__");
+auto sizeTType = std::make_shared<BiuType>("__SIZE_T__",
+        sizeof(size_t) == 4 ?
+        llvm::Type::getInt32Ty(llvm::getGlobalContext())
+        : llvm::Type::getInt64Ty(llvm::getGlobalContext()));
 
 //===------------ types -----------------------=====
 //==================================================
@@ -49,6 +53,20 @@ bool BiuType::operator!=(const BiuType& h) const
     return !(*this == h);
 }
 
+ArrayType::ArrayType(std::shared_ptr<BiuType> eleType) : eleType(eleType)
+{
+    eleSize = dataLayout->getTypeAllocSize(eleType->llvmType);
+
+    llvmType = llvm::StructType::get(llvm::getGlobalContext(), {eleType->llvmType->getPointerTo(), sizeTType->llvmType, sizeTType->llvmType});
+
+    std::string id;
+    id = "(Array ";
+    id += eleType->identifier;
+    id += ")";
+    identifier = id;
+    hashed_id = std::hash<std::string>()(id);
+}
+
 FuncType::FuncType(const std::vector<shared_ptr<BiuType>>& args, shared_ptr<BiuType> ret, llvm::Type *lTy)
     : returnType(ret)
 {
@@ -63,7 +81,7 @@ FuncType::FuncType(const std::vector<shared_ptr<BiuType>>& args, shared_ptr<BiuT
         }
         llvmType = llvm::StructType::get(llvm::getGlobalContext(),
                                             { llvm::FunctionType::get(ret->llvmType, argT, false)->getPointerTo(),
-                                            llvm::Type::getInt8Ty(llvm::getGlobalContext())->getPointerTo(), }, false);
+                                            llvm::Type::getInt8Ty(llvm::getGlobalContext())->getPointerTo() }, false);
     }
 
     std::string id;
@@ -96,6 +114,12 @@ void SymbolAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std:
     if(binded.find(identifier) == binded.end()) {
         s.insert(make_pair(identifier, symbolType));
     }
+    return;
+}
+
+void MakeArrayAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    numEleExpr->scanFreeVars(s, binded);
     return;
 }
 
@@ -139,6 +163,19 @@ void ExternRawFormAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& 
     binded.insert(name->identifier);
 }
 
+void GetIndexAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    array->scanFreeVars(s, binded);
+    index->scanFreeVars(s, binded);
+}
+
+void SetIndexAST::scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded)
+{
+    array->scanFreeVars(s, binded);
+    index->scanFreeVars(s, binded);
+    element->scanFreeVars(s, binded);
+}
+
 //===------------ type checker ---------------======
 //==================================================
 
@@ -174,6 +211,9 @@ shared_ptr<BiuType> ApplicationFormAST::parseType()
                 }
                 retType = elements[elements.size() - 1]->parseType();
                 return std::make_shared<FuncType>(argTypes, retType);
+            } else if(ptr->identifier == "Array" && elements.size() == 2) {
+                auto eleType = elements[1]->parseType();
+                return std::make_shared<ArrayType>(eleType);
             }
         }
     }
@@ -193,7 +233,7 @@ shared_ptr<BiuType> DefineVarFormAST::checkType(TypeEnvironment &e)
     varType = e[name->identifier] = value->checkType(e);
     cerr<<"Biu type of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
     cerr<<"IR type of "<<name->identifier<<" : "<<e[name->identifier]->llvmType<<std::endl<<std::endl;
-    return std::make_shared<BiuType>("Void");
+    return voidType;
 }
 
 
@@ -268,7 +308,7 @@ shared_ptr<BiuType> DefineFuncFormAST::checkType(TypeEnvironment &e)
     cerr<<"BiuType of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
     cerr<<"IR type of "<<name->identifier<<" : "<<funType->llvmType<<std::endl<<std::endl;
 
-    return std::make_shared<BiuType>("Void");
+    return voidType;
 }
 
 shared_ptr<BiuType> ApplicationFormAST::checkType(TypeEnvironment &e) {
@@ -313,6 +353,55 @@ shared_ptr<BiuType> SymbolAST::checkType(TypeEnvironment &e) {
     }
     throw(CheckerError("Cannot resolve type of " + identifier));
     return nullptr;
+}
+
+shared_ptr<BiuType> MakeArrayAST::checkType(TypeEnvironment &e) {
+    eleType = eleTypeExpr->parseType();
+    if(numEleExpr->checkType(e) != numberType) {
+        throw(CheckerError("make-array: array length should be a number"));
+        return nullptr;
+    }
+    arrType = std::make_shared<ArrayType>(eleType);
+    return arrType;
+}
+
+
+shared_ptr<BiuType> SetIndexAST::checkType(TypeEnvironment &e) {
+    auto arrType = array->checkType(e);
+    auto idxType = index->checkType(e);
+    auto eleType = element->checkType(e);
+    if(auto pAT = dynamic_cast<ArrayType*>( arrType.get())) {
+        if(idxType != numberType) {
+            CheckerError("set: second argument should be a number");
+            return nullptr;
+        }
+        if(*eleType != *pAT->eleType) {
+            CheckerError("set: array type and element type mismatch: " + eleType->identifier 
+                    + " and " + pAT->identifier);
+            return nullptr;
+        }
+        this->arrType = std::make_shared<ArrayType>(pAT->eleType);
+        return voidType;
+    } else {
+        CheckerError("set: first argument should be an array");
+        return nullptr;
+    }
+}
+
+shared_ptr<BiuType> GetIndexAST::checkType(TypeEnvironment &e) {
+    auto arrType = array->checkType(e);
+    auto idxType = index->checkType(e);
+    if(auto pAT = dynamic_cast<ArrayType*>( arrType.get())) {
+        if(idxType != numberType) {
+            ParserError("get: second argument should be a number");
+            return nullptr;
+        }
+        this->arrType = std::make_shared<ArrayType>(pAT->eleType);
+        return pAT->eleType;
+    } else {
+        ParserError("get: first argument should be an array");
+        return nullptr;
+    }
 }
 
 shared_ptr<BiuType> ExternRawFormAST::checkType(TypeEnvironment &e) {

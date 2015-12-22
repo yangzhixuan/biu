@@ -8,13 +8,17 @@ int main(int argc, const char *argv[])
 {
     try{
         initParser();
+        initCodeGenerator();
+
+        // parsing
         auto ast = parseForms();
 
+        // type checking
         TypeEnvironment env;
         ast->checkType(env);
         std::cout<<"finished typechecking"<<std::endl;
 
-        initCodeGenerator();
+        // code generation
         ValueEnvironment vEnv;
         ast->codeGen(vEnv);
 

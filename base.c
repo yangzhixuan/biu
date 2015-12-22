@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 
 typedef struct closureType{
     void *func;
@@ -48,3 +49,9 @@ static double printnumber_func(void* env, double a)
 
 }
 closure print = {printnumber_func, (void*)0};
+
+static double sin_func(void* env, double a)
+{
+    return sin(a);
+}
+closure __sin = {sin_func, (void*)0};

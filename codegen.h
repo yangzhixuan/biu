@@ -15,4 +15,5 @@ typedef std::map<std::string, Value*> ValueEnvironment;
 
 void initCodeGenerator();
 extern std::unique_ptr<Module> theModule;
+extern std::unique_ptr<llvm::DataLayout> dataLayout;
 #endif

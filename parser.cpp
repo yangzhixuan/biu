@@ -265,6 +265,43 @@ unique_ptr<FormAST> parseForm()
         }
         getNextToken();
         return std::move(form);
+    } else if(curTok == tok_symbol && symbolStr == "make-array"){
+        // make-array form
+        getNextToken();
+        auto form = llvm::make_unique<MakeArrayAST>();
+        form->eleTypeExpr = parseExpr();
+        form->numEleExpr = parseExpr();
+        if(curTok != ')') {
+            parserError(string("parseForm: make-array form expect a ')', get: ") + tok2str(curTok));
+            return nullptr;
+        }
+        getNextToken();
+        return std::move(form);
+    } else if(curTok == tok_symbol && symbolStr == "get") {
+        // get array element special form
+        getNextToken();
+        auto form = llvm::make_unique<GetIndexAST>();
+        form->array = parseExpr();
+        form->index = parseExpr();
+        if(curTok != ')') {
+            parserError(string("parseForm: get form expect a ')', get: ") + tok2str(curTok));
+            return nullptr;
+        }
+        getNextToken();
+        return std::move(form);
+    } else if(curTok == tok_symbol && symbolStr == "set!") {
+        // get array element special form
+        getNextToken();
+        auto form = llvm::make_unique<SetIndexAST>();
+        form->array = parseExpr();
+        form->index = parseExpr();
+        form->element = parseExpr();
+        if(curTok != ')') {
+            parserError(string("parseForm: set form expect a ')', get: ") + tok2str(curTok));
+            return nullptr;
+        }
+        getNextToken();
+        return std::move(form);
     } else {
         auto form = llvm::make_unique<ApplicationFormAST>();
         while(curTok != ')') {

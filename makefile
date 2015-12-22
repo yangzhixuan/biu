@@ -18,4 +18,4 @@ codegen.o : codegen.cpp codegen.h
 	g++ -c codegen.cpp $(CXXFLAGS) -o $@
 
 clean : 
-	rm -f biuc *.o
+	rm -f biuc *.o *.ll *.s

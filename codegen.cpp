@@ -9,22 +9,19 @@ using namespace llvm;
 
 //----------------- Globals -----------------------//
 std::unique_ptr<Module> theModule;
+std::unique_ptr<DataLayout> dataLayout;
 IRBuilder<> Builder(llvm::getGlobalContext());
 //----------------- Globals -----------------------//
 
 void initCodeGenerator()
 {
     theModule = llvm::make_unique<Module>("biu", llvm::getGlobalContext());
-    LLVMInitializeNativeTarget();
-    LLVMInitializeAllTargets();
-    LLVMInitializeAllTargetMCs();
-    LLVMInitializeAllAsmPrinters();
-    LLVMInitializeAllAsmParsers();
+    dataLayout = llvm::make_unique<DataLayout>(theModule.get());
 }
 
 
 //------------------ Generating Functions ---------//
-Value* ASTBase::codeGen(ValueEnvironment &e) { } 
+Value* ASTBase::codeGen(ValueEnvironment &e) { return nullptr; } 
 
 Value* FormsAST::codeGen(ValueEnvironment &e)
 {
@@ -62,6 +59,68 @@ Value* DefineVarFormAST::codeGen(ValueEnvironment &e)
 {
     Value* v = value->codeGen(e);
     e[name->identifier] = v;
+    return ConstantInt::getTrue(theModule->getContext());
+}
+
+Value* MakeArrayAST::codeGen(ValueEnvironment &e)
+{
+    // get the array allocation function
+    Function *F = theModule->getFunction("__make_array_func");
+    if(F == nullptr) {
+        FunctionType *FT =
+            FunctionType::get(voidType->llvmType, {arrType->llvmType->getPointerTo(), 
+                    llvm::Type::getDoubleTy(llvm::getGlobalContext()), sizeTType->llvmType}, false);
+        F = Function::Create(FT, Function::ExternalLinkage, "__make_array_func", theModule.get());
+    }
+
+    auto alloc = Builder.CreateAlloca(arrType->llvmType, nullptr);
+
+    Builder.CreateCall(F, { alloc, numEleExpr->codeGen(e), ConstantInt::get(sizeTType->llvmType, arrType->eleSize) });
+    return Builder.CreateLoad(alloc);
+}
+
+Value* GetIndexAST::codeGen(ValueEnvironment &e)
+{
+    auto arr = array->codeGen(e);
+    auto idx = index->codeGen(e);
+
+    Function *F = theModule->getFunction("__getelement_func");
+
+    if(F == nullptr) {
+        FunctionType *FT =
+            FunctionType::get(arrType->eleType->llvmType->getPointerTo(), {arrType->llvmType->getPointerTo(),
+                    llvm::Type::getDoubleTy(llvm::getGlobalContext())}, false);
+
+        F = Function::Create(FT, Function::ExternalLinkage, "__getelement_func", theModule.get());
+    }
+
+    auto alloc = Builder.CreateAlloca(arrType->llvmType, nullptr);
+    Builder.CreateStore(arr, alloc);
+
+    auto ep = Builder.CreateCall(F, { alloc, idx });
+    return Builder.CreateLoad(ep);
+}
+
+Value* SetIndexAST::codeGen(ValueEnvironment &e)
+{
+    auto arr = array->codeGen(e);
+    auto idx = index->codeGen(e);
+    auto ele = element->codeGen(e);
+
+    Function *F = theModule->getFunction("__getelement_func");
+
+    if(F == nullptr) {
+        FunctionType *FT =
+            FunctionType::get(arrType->eleType->llvmType->getPointerTo(), {arrType->llvmType->getPointerTo(),
+                    llvm::Type::getDoubleTy(llvm::getGlobalContext())}, false);
+
+        F = Function::Create(FT, Function::ExternalLinkage, "__getelement_func", theModule.get());
+    }
+    auto alloc = Builder.CreateAlloca(arrType->llvmType, nullptr);
+    Builder.CreateStore(arr, alloc);
+
+    auto ep = Builder.CreateCall(F, { alloc, idx });
+    Builder.CreateStore(ele, ep);
     return ConstantInt::getTrue(theModule->getContext());
 }
 
