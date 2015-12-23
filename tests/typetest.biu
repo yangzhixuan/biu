@@ -1,8 +1,8 @@
-(extern + (-> Number Number Number))
-(extern - (-> Number Number Number))
-(extern * (-> Number Number Number))
-(extern / (-> Number Number Number))
-(extern == (-> Number Number Bool))
+(extern + (=> Number Number Number))
+(extern - (=> Number Number Number))
+(extern * (=> Number Number Number))
+(extern / (=> Number Number Number))
+(extern == (=> Number Number Bool))
 
 (define (square (x Number))
   (* x x))

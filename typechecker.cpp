@@ -390,7 +390,7 @@ shared_ptr<BiuType> SetIndexAST::checkType(TypeEnvironment &e) {
             return nullptr;
         }
         if(*eleType != *pAT->eleType) {
-            CheckerError("set: array type and element type mismatch: " + eleType->identifier 
+            CheckerError("set: array type and element type mismatch: " + eleType->identifier
                     + " and " + pAT->identifier);
             return nullptr;
         }

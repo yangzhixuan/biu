@@ -4,6 +4,8 @@
 (extern-raw / (=> Number Number Number) "__div")
 (extern-raw sin (=> Number Number) "__sin")
 (extern-raw = (=> Number Number Bool) "equal")
+(extern-raw > (=> Number Number Bool) "greater")
+(extern-raw < (=> Number Number Bool) "less")
 (extern-raw char-equal? (=> Char Char Bool) "equal_char")
 (extern-raw print (=> Number Number) "print")
 (extern-raw cos (=> Number Number) "cosclosure")
@@ -28,21 +30,23 @@
     index
     (save-char c)))
 
+
+
+
 (define ((interpret Bool)
          (program (Array Char)))
 
   (define memory (make-array Char 1000))
 
   (define ((loop Bool)
-           (ptr Number)
-           (stk-top Number))
+           (ptr Number))
 
     (define (move (offset Number))
-      (loop (+ ptr offset) stk-top))
+      (loop (+ ptr offset)))
 
     (define (add (amout Number))
       (set! memory ptr
-        (+ amout (get memory ptr))))
+        (number->char (+ amout (char->number (get memory ptr))))))
 
     (define (read)
       (set! memory ptr (getchar)))
@@ -50,20 +54,52 @@
     (define (output)
       (putchar (get memory ptr)))
 
-    (define (while-enter)
-      )
+    (define ((findmatch Number) (ptr Number) (value Number) (offset Number))
+      (if (= value 0)
+        ptr
+        (if (char-equal? (get memory ptr) '[')
+          (findmatch (+ ptr offset) (+ value 1) offset)
+          (if (char-equal? (get memory ptr) ']')
+            (findmatch (+ ptr offset) (- value 1) offset)
+            (findmatch (+ ptr offset) value offset)))))
 
+    (define (while-enter)
+      (if (= (get memory ptr) 0)
+        (loop (findmatch (+ ptr 1) 1 1))
+        (loop (+ ptr 1))))
+
+    (define (while-exit)
+      (loop (+ (findmatch (- ptr 1) -1 -1) 1)))
 
     (define c (get program ptr))
-    (if (char-equal? c '+')
-      (loop (+ ptr 1)))
-    )
 
-  (loop 0 0))
+    (if (> ptr length)
+      true
+      (if (char-equal? c '>')
+        (move 1)
+        (if (char-equal? c '<')
+          (move -1)
+          (if (char-equal? c '+')
+            (add 1)
+            (if (char-equal? c '-')
+              (add -1)
+              (if (char-equal? c '[')
+                (while-enter)
+                (if (char-equal? c ']')
+                  (while-exit)
+                  (if (char-equal? c '.')
+                    (output)
+                    (if (char-equal? c ',')
+                      (read)
+                      false))))))))))
+  (loop 0))
+
+
+
 
 
 (define program (make-array Char 10000))
 
 (define length (read_program program 0))
 
-
+(interpret program)

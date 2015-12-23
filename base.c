@@ -41,6 +41,18 @@ static char equal_func(void* env, double a, double b)
 }
 closure equal = {equal_func, (void*)0};
 
+static char greater_func(void* env, double a, double b)
+{
+    return a > b;
+}
+closure greater = {greater_func, (void*)0};
+
+static char less_func(void* env, double a, double b)
+{
+    return a < b;
+}
+closure less = {less_func, (void*)0};
+
 static char equalchar_func(void* env, char a, char b)
 {
     return a==b;
