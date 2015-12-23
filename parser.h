@@ -126,6 +126,8 @@ class ApplicationFormAST : public FormAST {
         shared_ptr<BiuType> parseType() override;
         Value *codeGen(ValueEnvironment &e) override;
         void scanFreeVars(std::set<pair<string,shared_ptr<BiuType>>>& s, std::set<string>& binded) override;
+    private:
+        shared_ptr<BiuType> returnType;
 };
 
 class DefineFuncFormAST : public FormAST {

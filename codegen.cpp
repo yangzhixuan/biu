@@ -233,23 +233,27 @@ Value* ApplicationFormAST::codeGen(ValueEnvironment &e)
     auto ite = elements.begin();
     auto op = (*ite)->codeGen(e);
     vector<Value*> args;
+    vector<Type*> types;
 
-    // extract the funcion pointer from the closure
-    Value *fp = Builder.CreateExtractValue(op, { 0 });
-
-    // the first argument is the environment
     Value *env = Builder.CreateExtractValue(op, { 1 });
+    // the first argument is the environment
     args.push_back(env);
+    types.push_back(env->getType());
 
     ite++;
+
     while(ite != elements.end()) {
-        // TODO If the argument is a function, cast its type to generic function type
         auto arg = (*ite) -> codeGen(e);
         args.push_back(arg);
+        types.push_back(arg->getType());
         ite++;
     }
 
-    return Builder.CreateCall(fp, args);
+    // extract the funcion pointer from the closure
+    auto fp = Builder.CreateExtractValue(op, { 0 });
+    auto fp_cast = Builder.CreateBitCast(fp, FunctionType::get(returnType->llvmType, types, false)->getPointerTo());
+
+    return Builder.CreateCall(fp_cast, args);
 }
 
 Value* IfFormAST::codeGen(ValueEnvironment &e)

@@ -336,7 +336,7 @@ shared_ptr<BiuType> ApplicationFormAST::checkType(TypeEnvironment &e) {
                     return nullptr;
                 }
             }
-            return pFT->returnType;
+            return returnType = pFT->returnType;
         } else {
             throw(CheckerError("ApplicationForm the operator must be a function, got: " + opType->identifier));
         }
