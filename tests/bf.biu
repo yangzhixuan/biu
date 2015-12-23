@@ -30,8 +30,11 @@
     index
     (save-char c)))
 
+(define program (make-array Char 10000))
 
+(define length (read_program program 0))
 
+;(print length)
 
 (define ((interpret Bool)
          (program (Array Char)))
@@ -39,39 +42,45 @@
   (define memory (make-array Char 1000))
 
   (define ((loop Bool)
-           (ptr Number))
+           (ptr Number)
+           (index Number))
 
     (define (move (offset Number))
-      (loop (+ ptr offset)))
+      (loop (+ ptr 1) (+ index offset)))
 
     (define (add (amout Number))
-      (set! memory ptr
-        (number->char (+ amout (char->number (get memory ptr))))))
+      (set! memory index
+        (number->char (+ amout (char->number (get memory index)))))
+      (loop (+ ptr 1) index))
 
     (define (read)
-      (set! memory ptr (getchar)))
+      (set! memory index (getchar))
+      (loop (+ ptr 1) index))
 
     (define (output)
-      (putchar (get memory ptr)))
+      (putchar (get memory index))
+      (loop (+ ptr 1) index))
 
     (define ((findmatch Number) (ptr Number) (value Number) (offset Number))
       (if (= value 0)
         ptr
-        (if (char-equal? (get memory ptr) '[')
+        (if (char-equal? (get program ptr) '[')
           (findmatch (+ ptr offset) (+ value 1) offset)
-          (if (char-equal? (get memory ptr) ']')
+          (if (char-equal? (get program ptr) ']')
             (findmatch (+ ptr offset) (- value 1) offset)
             (findmatch (+ ptr offset) value offset)))))
 
     (define (while-enter)
-      (if (= (get memory ptr) 0)
-        (loop (findmatch (+ ptr 1) 1 1))
-        (loop (+ ptr 1))))
+      (if (= (char->number (get memory index)) 0)
+        (loop (findmatch (+ ptr 1) 1 1) index)
+        (loop (+ ptr 1) index)))
 
     (define (while-exit)
-      (loop (+ (findmatch (- ptr 1) -1 -1) 1)))
+      (loop (+ (findmatch (- ptr 1) -1 -1) 1) index))
 
     (define c (get program ptr))
+
+    ;(putchar c)
 
     (if (> ptr length)
       true
@@ -92,14 +101,7 @@
                     (if (char-equal? c ',')
                       (read)
                       false))))))))))
-  (loop 0))
+  (loop 0 0))
 
-
-
-
-
-(define program (make-array Char 10000))
-
-(define length (read_program program 0))
 
 (interpret program)
