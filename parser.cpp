@@ -62,6 +62,11 @@ static int getToken()
             lastChar = getchar();
         } while(isdigit(lastChar) || lastChar == '.');
 
+        if(numStr == "-") {
+            symbolStr = "-";
+            return tok_symbol;
+        }
+
         const char* endpoint;
         numVal = strtod(numStr.c_str(), nullptr);
         return tok_number;
@@ -212,7 +217,7 @@ ExprAST::~ExprAST() {}
 static int curTok;
 static int getNextToken()
 {
-    // printf("consume: %s\n", tok2str(curTok).c_str());
+    printf("consume: %s\n", tok2str(curTok).c_str());
     curTok = getToken();
     return curTok;
 }
@@ -369,6 +374,7 @@ unique_ptr<FormAST> parseForm()
         getNextToken();
         return std::move(form);
     } else {
+        cerr<<std::endl<<std::endl;
         auto form = llvm::make_unique<ApplicationFormAST>();
         while(curTok != ')') {
             form->elements.push_back( parseExpr() );

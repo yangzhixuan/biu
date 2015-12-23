@@ -1,36 +1,36 @@
-;(extern-raw + (=> Number Number Number) "add")
-;(extern-raw - (=> Number Number Number) "sub")
-;(extern-raw * (=> Number Number Number) "mul")
-;(extern-raw / (=> Number Number Number) "div")
-;(extern-raw sin (=> Number Number) "__sin")
-;(extern-raw == (=> Number Number Bool) "equal")
+(extern-raw + (=> Number Number Number) "add")
+(extern-raw - (=> Number Number Number) "sub")
+(extern-raw * (=> Number Number Number) "mul")
+(extern-raw / (=> Number Number Number) "div")
+(extern-raw sin (=> Number Number) "__sin")
+(extern-raw == (=> Number Number Bool) "equal")
 (extern-raw print (=> Number Number) "print")
-;(extern-raw cos (=> Number Number) "cosclosure")
-;(extern-raw sin (=> Number Number) "sinclosure")
-;(extern-raw getchar (=> Char) "getcharclosure")
-;(extern-raw putchar (=> Char Number) "putcharclosure")
-;(extern-raw numbertochar (=> Number Char) "numbertocharclosure")
-;(extern-raw chartonumber (=> Char Number) "chartonumberclosure")
+(extern-raw cos (=> Number Number) "cosclosure")
+(extern-raw sin (=> Number Number) "sinclosure")
+(extern-raw getchar (=> Char) "getcharclosure")
+(extern-raw putchar (=> Char Number) "putcharclosure")
+(extern-raw numbertochar (=> Number Char) "numbertocharclosure")
+(extern-raw chartonumber (=> Char Number) "chartonumberclosure")
 
-;(define (myadder (x Number))
-;  (define (g (y Number))
-;    (+ x y))
-;  g)
-;
-;(define add5 (myadder 5))
-;
-;(print (add5 1))
-;
-;
-;(define ((fact Number) (n Number))
-;  (if (== n 0)
-;    1
-;    (* n (fact (- n 1)))))
-;
-;
-;(print (fact 5))
-;
-;(define (sort (a (Array Number)))
-;  5)
+(define (myadder (x Number))
+  (define (g (y Number))
+    (+ x y))
+  g)
+
+(define add5 (myadder 5))
+
+(print (add5 1))
+
+
+(define ((fact Number) (n Number))
+  (if (== n 0)
+    1
+    (* n (fact (- n 1)))))
+
+
+(print (fact 5))
+
+(define (sort (a (Array Number)))
+  5)
 
 (print -5)
