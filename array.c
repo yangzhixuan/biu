@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 #include "base.h"
 
 typedef struct array_tag{
@@ -19,6 +20,7 @@ void __make_array_func(array* a, double num_ele_d, size_t type_size)
     a->type_size = type_size;
 
     a->mem = malloc(a->num_ele * a->type_size);
+    memset(a->mem, 0, a->num_ele * a->type_size);
     if(a->mem == NULL) {
         perror("make_array");
     }

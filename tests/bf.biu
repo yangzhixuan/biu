@@ -1,9 +1,10 @@
 (extern-raw + (=> Number Number Number) "add")
 (extern-raw - (=> Number Number Number) "sub")
 (extern-raw * (=> Number Number Number) "mul")
-(extern-raw / (=> Number Number Number) "div")
+(extern-raw / (=> Number Number Number) "__div")
 (extern-raw sin (=> Number Number) "__sin")
-(extern-raw == (=> Number Number Bool) "equal")
+(extern-raw = (=> Number Number Bool) "equal")
+(extern-raw char-equal? (=> Char Char Bool) "equal_char")
 (extern-raw print (=> Number Number) "print")
 (extern-raw cos (=> Number Number) "cosclosure")
 (extern-raw sin (=> Number Number) "sinclosure")
@@ -23,11 +24,46 @@
 
   (define c (getchar))
 
-  (if (== (char->number c) -1)
+  (if (= (char->number c) -1)
     index
     (save-char c)))
+
+(define ((interpret Bool)
+         (program (Array Char)))
+
+  (define memory (make-array Char 1000))
+
+  (define ((loop Bool)
+           (ptr Number)
+           (stk-top Number))
+
+    (define (move (offset Number))
+      (loop (+ ptr offset) stk-top))
+
+    (define (add (amout Number))
+      (set! memory ptr
+        (+ amout (get memory ptr))))
+
+    (define (read)
+      (set! memory ptr (getchar)))
+
+    (define (output)
+      (putchar (get memory ptr)))
+
+    (define (while-enter)
+      )
+
+
+    (define c (get program ptr))
+    (if (char-equal? c '+')
+      (loop (+ ptr 1)))
+    )
+
+  (loop 0 0))
+
 
 (define program (make-array Char 10000))
 
 (define length (read_program program 0))
+
 

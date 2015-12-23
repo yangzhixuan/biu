@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 
 typedef struct closureType{
@@ -32,7 +33,7 @@ static double div_func(void* env, double a, double b)
 {
     return a/b;
 }
-closure div = {div_func, (void*)0};
+closure __div = {div_func, (void*)0};
 
 static char equal_func(void* env, double a, double b)
 {
@@ -40,6 +41,11 @@ static char equal_func(void* env, double a, double b)
 }
 closure equal = {equal_func, (void*)0};
 
+static char equalchar_func(void* env, char a, char b)
+{
+    return a==b;
+}
+closure equal_char = {equalchar_func, (void*)0};
 
 static double printnumber_func(void* env, double a)
 {
