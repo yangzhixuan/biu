@@ -217,7 +217,7 @@ ExprAST::~ExprAST() {}
 static int curTok;
 static int getNextToken()
 {
-    printf("consume: %s\n", tok2str(curTok).c_str());
+    // printf("consume: %s\n", tok2str(curTok).c_str());
     curTok = getToken();
     return curTok;
 }
@@ -313,9 +313,7 @@ unique_ptr<FormAST> parseForm()
         auto form = llvm::make_unique<IfFormAST>();
         form->condition = parseExpr();
         form->branch_true = parseExpr();
-        if(curTok != ')') {
-            form->branch_false = parseExpr();
-        }
+        form->branch_false = parseExpr();
 
         if(curTok != ')') {
             parserError(string("parseForm: if-form expect a ')', get: ") + tok2str(curTok));
@@ -374,7 +372,6 @@ unique_ptr<FormAST> parseForm()
         getNextToken();
         return std::move(form);
     } else {
-        cerr<<std::endl<<std::endl;
         auto form = llvm::make_unique<ApplicationFormAST>();
         while(curTok != ')') {
             form->elements.push_back( parseExpr() );

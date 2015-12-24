@@ -238,7 +238,7 @@ shared_ptr<BiuType> DefineVarFormAST::checkType(TypeEnvironment &e)
     // TODO add define-var type annotating
     varType = e[name->identifier] = value->checkType(e);
     cerr<<"Biu type of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
-    cerr<<"IR type of "<<name->identifier<<" : "<<e[name->identifier]->llvmType<<std::endl<<std::endl;
+    // cerr<<"IR type of "<<name->identifier<<" : "<<e[name->identifier]->llvmType<<std::endl<<std::endl;
     return voidType;
 }
 
@@ -311,8 +311,8 @@ shared_ptr<BiuType> DefineFuncFormAST::checkType(TypeEnvironment &e)
     funType->llvmType = llvm::StructType::get(llvm::getGlobalContext(), {flatFuncType->getPointerTo(), envType->getPointerTo()}, false);
 
     e[name->identifier] = funType;
-    cerr<<"BiuType of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
-    cerr<<"IR type of "<<name->identifier<<" : "<<funType->llvmType<<std::endl<<std::endl;
+    cerr<<"Biu type of "<<name->identifier<<" : "<<e[name->identifier]->identifier<<std::endl;
+    // cerr<<"IR type of "<<name->identifier<<" : "<<funType->llvmType<<std::endl<<std::endl;
 
     return voidType;
 }
@@ -421,8 +421,8 @@ shared_ptr<BiuType> GetIndexAST::checkType(TypeEnvironment &e) {
 shared_ptr<BiuType> ExternRawFormAST::checkType(TypeEnvironment &e) {
     auto t = type->parseType();
     varType = e[name->identifier] = t;
-    cerr<<"Biu type of "<<name->identifier<<" : "<<varType->identifier<<std::endl;
-    cerr<<"IR type of "<<name->identifier<<" : "<<varType->llvmType<<std::endl<<std::endl;;
+    // cerr<<"Biu type of "<<name->identifier<<" : "<<varType->identifier<<std::endl;
+    // cerr<<"IR type of "<<name->identifier<<" : "<<varType->llvmType<<std::endl<<std::endl;;
     return voidType;
 }
 
